@@ -13,9 +13,6 @@
             <NavigationViewItem Content="设备中心" Tag="devices" IsSelected="True">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItem Content="无线配对" Tag="pairing">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE839;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
             <NavigationViewItem Content="镜像会话" Tag="sessions">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE714;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
@@ -76,7 +73,7 @@
                     </Grid>
                 </Border>
 
-                <Expander x:Name="PairingExpander" Header="Android 11+ 安全无线配对" IsExpanded="False">
+                <Expander Header="Android 11+ 安全无线配对" IsExpanded="False">
                     <Grid Padding="0,12,0,2" ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />

@@ -181,10 +181,6 @@ public sealed partial class MainPage : Page
         var tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag as string;
         switch (tag)
         {
-            case "pairing":
-                DeviceCenterView.Visibility = Visibility.Visible;
-                PairingExpander.IsExpanded = true;
-                break;
             case "sessions":
                 SessionsView.Visibility = Visibility.Visible;
                 break;
