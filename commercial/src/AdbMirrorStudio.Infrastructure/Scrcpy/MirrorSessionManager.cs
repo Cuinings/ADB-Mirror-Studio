@@ -122,12 +122,28 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         try
         {
             if (!_sessions.TryGetValue(deviceSerial, out var managed)) return;
+            managed.StopRequested = true;
             managed.Session = managed.Session with { State = MirrorSessionState.Stopping };
             RaiseChanged(managed.Session);
 
             if (IsRunning(managed.Process))
             {
-                managed.Process.Kill(entireProcessTree: true);
+                var closeRequested = managed.Process.CloseMainWindow();
+                if (closeRequested)
+                {
+                    try
+                    {
+                        await managed.Process.WaitForExitAsync(cancellationToken)
+                            .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    catch (TimeoutException)
+                    {
+                        // Fall through to the safety kill below if scrcpy does not react to WM_CLOSE.
+                    }
+                }
+
+                if (IsRunning(managed.Process)) managed.Process.Kill(entireProcessTree: true);
                 await managed.Process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
         }
@@ -147,10 +163,11 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
             var stdout = await stdoutTask.ConfigureAwait(false);
             var stderr = await stderrTask.ConfigureAwait(false);
             var exitCode = managed.Process.ExitCode;
-            var error = exitCode == 0 ? null : LastMeaningfulLine(stderr, stdout);
+            var stoppedByUser = managed.StopRequested;
+            var error = exitCode == 0 || stoppedByUser ? null : LastMeaningfulLine(stderr, stdout);
             managed.Session = managed.Session with
             {
-                State = exitCode == 0 ? MirrorSessionState.Exited : MirrorSessionState.Failed,
+                State = exitCode == 0 || stoppedByUser ? MirrorSessionState.Exited : MirrorSessionState.Failed,
                 ExitCode = exitCode,
                 Error = error
             };
@@ -269,6 +286,7 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
     {
         public Process Process { get; } = process;
         public MirrorSession Session { get; set; } = session;
+        public volatile bool StopRequested;
     }
 
     private static partial class NativeMethods

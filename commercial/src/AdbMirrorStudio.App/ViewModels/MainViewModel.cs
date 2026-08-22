@@ -500,13 +500,35 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var snapshot = await _refreshCoordinator.RefreshAsync(refreshCancellation.Token);
             if (snapshot is null) return;
 
-            var running = _mirrorSessions.ActiveSessions.Select(session => session.DeviceSerial).ToHashSet(StringComparer.Ordinal);
+            var activeSessions = _mirrorSessions.ActiveSessions
+                .OrderByDescending(session => session.StartedAt)
+                .ToArray();
+            var running = activeSessions.Select(session => session.DeviceSerial).ToHashSet(StringComparer.Ordinal);
             var selectedTransfer = SelectedTransferDeviceSerial;
             var selectedTools = SelectedToolsDeviceSerial;
             Devices.Clear();
             foreach (var device in snapshot.Devices)
             {
                 Devices.Add(new DeviceCardViewModel(device, running.Contains(device.Serial)));
+            }
+
+            Sessions.Clear();
+            foreach (var session in activeSessions.Where(session => session.State is MirrorSessionState.Starting or MirrorSessionState.Running or MirrorSessionState.Stopping))
+            {
+                Sessions.Add(new MirrorSessionCardViewModel(session));
+            }
+
+            foreach (var recordingSession in activeSessions.Where(session => !string.IsNullOrWhiteSpace(session.RecordPath)))
+            {
+                var existing = Recordings.FirstOrDefault(item => item.SessionId == recordingSession.Id);
+                if (existing is null)
+                {
+                    Recordings.Insert(0, new RecordingItemViewModel(recordingSession));
+                }
+                else
+                {
+                    existing.Update(recordingSession);
+                }
             }
 
             var onlineSerials = snapshot.Devices
@@ -1024,6 +1046,7 @@ public sealed class RecordingItemViewModel : INotifyPropertyChanged
         Path = session.RecordPath ?? string.Empty;
         StartedAt = session.StartedAt;
         _status = StateLabel(session.State);
+        Update(session);
     }
     public string SessionId { get; }
     public string DeviceSerial { get; }
@@ -1038,13 +1061,20 @@ public sealed class RecordingItemViewModel : INotifyPropertyChanged
         Status = StateLabel(session.State);
         if (session.State == MirrorSessionState.Exited)
         {
-            if (!File.Exists(Path))
+            try
             {
-                Status = "文件未生成";
-                return;
+                if (!File.Exists(Path))
+                {
+                    Status = "文件未生成";
+                    return;
+                }
+                var bytes = new FileInfo(Path).Length;
+                SizeLabel = bytes < 1024 * 1024 ? $"{bytes / 1024d:F1} KB" : $"{bytes / 1024d / 1024d:F1} MB";
             }
-            var bytes = new FileInfo(Path).Length;
-            SizeLabel = bytes < 1024 * 1024 ? $"{bytes / 1024d:F1} KB" : $"{bytes / 1024d / 1024d:F1} MB";
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                SizeLabel = "暂不可用";
+            }
         }
     }
     private static string StateLabel(MirrorSessionState state) => state switch
