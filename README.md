@@ -1,5 +1,9 @@
 # ADB Mirror Studio
 
+<p align="center">
+  <img src="commercial/src/AdbMirrorStudio.App/Assets/Square150x150Logo.scale-200.png" width="128" alt="ADB Mirror Studio 应用图标" />
+</p>
+
 面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输与环境诊断工作台。所有功能永久免费，无账户、无试用期、无订阅、无激活和功能分级。
 
 ![ADB Mirror Studio 文件与 APK 页面](commercial/artifacts/files-feature-smoke.png)
@@ -14,7 +18,7 @@
 SHA256：
 
 ```text
-57F95FBA485A9435BC7328F36B4FF35E1625706F6C719D864B28BA580CCFFB17
+C5140C293A80E32E5F0B7862831AAE0E091611C3738079837BADD880776CC4F1
 ```
 
 ## 主要功能
