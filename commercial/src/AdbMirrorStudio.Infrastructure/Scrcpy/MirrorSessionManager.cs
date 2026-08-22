@@ -40,7 +40,15 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_sessions.TryGetValue(deviceSerial, out var existing))
             {
-                if (IsRunning(existing.Process)) return existing.Session;
+                if (IsRunning(existing.Process))
+                {
+                    var sameConfiguration = string.Equals(existing.Session.RecordPath, profile.RecordPath, StringComparison.OrdinalIgnoreCase)
+                        && existing.Session.MaxSize == profile.MaxSize
+                        && existing.Session.MaxFps == profile.MaxFps
+                        && existing.Session.VideoBitRateMbps == profile.VideoBitRateMbps;
+                    if (sameConfiguration) return existing.Session;
+                    throw new InvalidOperationException("该设备的镜像已经运行。更改录制或采集配置前，请先停止现有会话。");
+                }
                 _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(deviceSerial, existing));
             }
 

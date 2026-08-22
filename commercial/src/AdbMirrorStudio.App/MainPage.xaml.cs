@@ -44,9 +44,11 @@ public sealed partial class MainPage : Page
         {
             if (_shutdown) return;
             CrashLog.Write(exception);
+            var root = XamlRoot;
+            if (_shutdown || root is null) return;
             await new ContentDialog
             {
-                XamlRoot = XamlRoot,
+                XamlRoot = root,
                 Title = "初始化失败",
                 Content = exception.Message,
                 CloseButtonText = "关闭"
@@ -413,6 +415,16 @@ public sealed partial class MainPage : Page
     private void ClearRecordingPath_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is not null) ViewModel.RecordingPath = string.Empty;
+    }
+
+    private void OpenRecordingDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { CommandParameter: string path } || string.IsNullOrWhiteSpace(path)) return;
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+        {
+            Process.Start(new ProcessStartInfo(directory) { UseShellExecute = true });
+        }
     }
 
     private async void AutoRefreshToggle_Toggled(object sender, RoutedEventArgs e)

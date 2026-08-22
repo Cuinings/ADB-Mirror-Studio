@@ -582,10 +582,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var profile = MirrorProfile.Presets.FirstOrDefault(item => item.Id == SelectedMirrorProfileId)
                 ?? MirrorProfile.Balanced;
             if (IsRecordingEnabled) profile = profile with { RecordPath = RecordingPath };
-            await _mirrorSessions.StartAsync(serial, profile, card?.DisplayName);
-            StatusText = IsRecordingEnabled
-                ? $"已启动 {serial} 的镜像并录制到 {RecordingPath}"
-                : $"已使用“{profile.Name}”预设启动 {serial} 的镜像";
+            var session = await _mirrorSessions.StartAsync(serial, profile, card?.DisplayName);
+            StatusText = !string.IsNullOrWhiteSpace(session.RecordPath)
+                ? $"已启动 {serial} 的镜像并录制到 {session.RecordPath}"
+                : $"已使用“{session.ProfileName}”预设启动 {serial} 的镜像";
         }
         catch (Exception exception)
         {
@@ -1016,6 +1016,7 @@ public sealed record InstalledAppViewModel(InstalledApp App)
 public sealed class RecordingItemViewModel : INotifyPropertyChanged
 {
     private string _status;
+    private string _sizeLabel = "—";
     public RecordingItemViewModel(MirrorSession session)
     {
         SessionId = session.Id;
@@ -1030,8 +1031,22 @@ public sealed class RecordingItemViewModel : INotifyPropertyChanged
     public DateTimeOffset StartedAt { get; }
     public string FileName => System.IO.Path.GetFileName(Path);
     public string StartedAtLabel => StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    public string SizeLabel { get => _sizeLabel; private set { if (_sizeLabel == value) return; _sizeLabel = value; PropertyChanged?.Invoke(this, new(nameof(SizeLabel))); } }
     public string Status { get => _status; private set { if (_status == value) return; _status = value; PropertyChanged?.Invoke(this, new(nameof(Status))); } }
-    public void Update(MirrorSession session) => Status = StateLabel(session.State);
+    public void Update(MirrorSession session)
+    {
+        Status = StateLabel(session.State);
+        if (session.State == MirrorSessionState.Exited)
+        {
+            if (!File.Exists(Path))
+            {
+                Status = "文件未生成";
+                return;
+            }
+            var bytes = new FileInfo(Path).Length;
+            SizeLabel = bytes < 1024 * 1024 ? $"{bytes / 1024d:F1} KB" : $"{bytes / 1024d / 1024d:F1} MB";
+        }
+    }
     private static string StateLabel(MirrorSessionState state) => state switch
     {
         MirrorSessionState.Running => "录制中",

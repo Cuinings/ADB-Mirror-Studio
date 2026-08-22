@@ -195,12 +195,9 @@
                         <AppBarButton Label="纵向排列" Tag="vertical" Click="ArrangeWindows_Click" />
                     </CommandBar>
                 </StackPanel>
-                <Grid Grid.Row="1" Margin="0,12,0,0" RowSpacing="12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                <ListView ItemsSource="{Binding Sessions}"
+                <ScrollViewer Grid.Row="1" Margin="0,12,0,10" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="14">
+                <ListView ItemsSource="{Binding Sessions}" MaxHeight="420"
                           SelectionMode="None" Background="Transparent">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
@@ -239,21 +236,30 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
-                    <Expander Grid.Row="1" Header="录制中心" IsExpanded="True">
-                        <ListView ItemsSource="{Binding Recordings}" MaxHeight="180" SelectionMode="None" Background="Transparent">
+                    <Border Padding="18" CornerRadius="14"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                        <StackPanel Spacing="10">
+                        <TextBlock Text="录制中心" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Text="选择录屏文件并启动新的镜像会话后，录制任务会显示在这里。已运行的镜像需要先停止，才能切换为录制模式。"
+                                   TextWrapping="Wrap" Opacity="0.66" />
+                        <ListView ItemsSource="{Binding Recordings}" MaxHeight="220" SelectionMode="None" Background="Transparent">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Padding="8" ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold"/><TextBlock Text="{Binding Path}" Opacity="0.62" TextTrimming="CharacterEllipsis"/></StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding DeviceSerial}" VerticalAlignment="Center" FontFamily="Consolas"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="{Binding Status}"/><TextBlock Text="{Binding SizeLabel}" Opacity="0.62"/></StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding DeviceSerial}" VerticalAlignment="Center" FontFamily="Consolas"/>
+                                        <Button Grid.Column="3" Content="打开目录" CommandParameter="{Binding Path}" Click="OpenRecordingDirectory_Click"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
-                    </Expander>
-                </Grid>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                </ScrollViewer>
                 <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
                         Background="{ThemeResource ControlFillColorSecondaryBrush}">
                     <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />

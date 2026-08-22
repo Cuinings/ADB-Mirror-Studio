@@ -8,6 +8,7 @@ namespace AdbMirrorStudio.App;
 
 public sealed partial class MainWindow : Window
 {
+    private bool _isClosing;
     public MainWindow(AppServices services)
     {
         InitializeComponent();
@@ -23,6 +24,7 @@ public sealed partial class MainWindow : Window
 
     internal void ApplyTheme(string theme)
     {
+        if (_isClosing) return;
         RootLayout.RequestedTheme = theme switch
         {
             "Light" => ElementTheme.Light,
@@ -32,12 +34,17 @@ public sealed partial class MainWindow : Window
         UpdateTitleBarColors();
     }
 
-    internal void PrepareForShutdown() => (RootFrame.Content as MainPage)?.Shutdown();
+    internal void PrepareForShutdown()
+    {
+        _isClosing = true;
+        (RootFrame.Content as MainPage)?.Shutdown();
+    }
 
     private void RootLayout_ActualThemeChanged(FrameworkElement sender, object args) => UpdateTitleBarColors();
 
     private void UpdateTitleBarColors()
     {
+        if (_isClosing) return;
         var isDark = RootLayout.ActualTheme == ElementTheme.Dark;
         var foreground = isDark ? Colors.White : Colors.Black;
         var inactive = isDark
