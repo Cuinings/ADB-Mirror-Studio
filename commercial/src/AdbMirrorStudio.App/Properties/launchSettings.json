@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "AdbMirrorStudio.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "AdbMirrorStudio.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

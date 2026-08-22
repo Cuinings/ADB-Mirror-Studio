@@ -1,0 +1,48 @@
+using AdbMirrorStudio.Application.Adb;
+using AdbMirrorStudio.Application.Devices;
+using AdbMirrorStudio.Domain.Devices;
+
+namespace AdbMirrorStudio.UnitTests;
+
+public sealed class DeviceRefreshCoordinatorTests
+{
+    [Fact]
+    public async Task RefreshAsync_DiscardsSlowOlderResult()
+    {
+        var first = new TaskCompletionSource<IReadOnlyList<DeviceInfo>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var second = new TaskCompletionSource<IReadOnlyList<DeviceInfo>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = new SequencedAdbService(first.Task, second.Task);
+        var coordinator = new DeviceRefreshCoordinator(service);
+
+        var olderTask = coordinator.RefreshAsync();
+        var newerTask = coordinator.RefreshAsync();
+        second.SetResult([Device("new")]);
+        first.SetResult([Device("old")]);
+
+        var newer = await newerTask;
+        var older = await olderTask;
+
+        Assert.NotNull(newer);
+        Assert.Equal("new", newer!.Devices.Single().Serial);
+        Assert.Null(older);
+    }
+
+    private static DeviceInfo Device(string serial) =>
+        new(serial, "—", "—", DeviceState.Online, ConnectionKind.Usb, DateTimeOffset.UtcNow);
+
+    private sealed class SequencedAdbService(params Task<IReadOnlyList<DeviceInfo>>[] results) : IAdbService
+    {
+        private int _index;
+        public Task<IReadOnlyList<DeviceInfo>> GetDevicesAsync(CancellationToken cancellationToken = default) =>
+            results[Interlocked.Increment(ref _index) - 1];
+        public Task<IReadOnlyList<MdnsService>> DiscoverAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> ConnectAsync(string endpoint, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> PairAsync(string endpoint, string pairingCode, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task DisconnectAsync(string serial, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task RebootAsync(string serial, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> EnableTcpIpAsync(string serial, int port = 5555, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> InstallApkAsync(string serial, string apkPath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> PushFileAsync(string serial, string localPath, string remoteDirectory = "/sdcard/Download/", CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> IsOnlineAsync(string serial, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+}

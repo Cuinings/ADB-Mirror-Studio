@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AdbMirrorStudio.App/AdbMirrorStudio.App.csproj" />
+    <Project Path="src/AdbMirrorStudio.Application/AdbMirrorStudio.Application.csproj" />
+    <Project Path="src/AdbMirrorStudio.Domain/AdbMirrorStudio.Domain.csproj" />
+    <Project Path="src/AdbMirrorStudio.Infrastructure/AdbMirrorStudio.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdbMirrorStudio.UnitTests/AdbMirrorStudio.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,12 @@
+.tools/
+venv/
+__pycache__/
+build/
+dist/
+commercial/**/bin/
+commercial/**/obj/
+commercial/artifacts/
+*.user
+*.suo
+*.log
+
