@@ -451,7 +451,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Image Source="Assets/Square44x44Logo.scale-200.png" Width="48" Height="48"
+                                <Image Source="ms-appx:///Assets/Square44x44Logo.scale-200.png" Width="48" Height="48"
                                        VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" Spacing="4">
                                     <TextBlock Text="ADB Mirror Studio" FontSize="20" FontWeight="SemiBold" />
