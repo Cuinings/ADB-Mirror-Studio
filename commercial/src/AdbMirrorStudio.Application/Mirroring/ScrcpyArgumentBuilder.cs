@@ -38,7 +38,8 @@ public static class ScrcpyArgumentBuilder
         if (!string.IsNullOrWhiteSpace(profile.RecordPath))
         {
             var extension = Path.GetExtension(profile.RecordPath);
-            if (extension is not (".mp4" or ".mkv"))
+            if (!extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+                && !extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException("录屏文件必须使用 .mp4 或 .mkv 扩展名。", nameof(profile.RecordPath));
             }

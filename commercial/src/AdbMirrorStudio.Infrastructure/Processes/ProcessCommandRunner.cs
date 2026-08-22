@@ -112,10 +112,9 @@ public sealed class ProcessCommandRunner : ICommandRunner
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
         }
-        catch (InvalidOperationException)
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            // The process exited between HasExited and Kill.
+            // The process exited or became inaccessible between HasExited and Kill.
         }
     }
 }
-

@@ -32,6 +32,8 @@ public sealed partial class MainWindow : Window
         UpdateTitleBarColors();
     }
 
+    internal void PrepareForShutdown() => (RootFrame.Content as MainPage)?.Shutdown();
+
     private void RootLayout_ActualThemeChanged(FrameworkElement sender, object args) => UpdateTitleBarColors();
 
     private void UpdateTitleBarColors()

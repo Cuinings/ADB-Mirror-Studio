@@ -7,7 +7,7 @@
 
     <NavigationView x:Name="Navigation" PaneDisplayMode="Auto" IsBackButtonVisible="Collapsed"
                     IsSettingsVisible="True" OpenPaneLength="220" CompactPaneLength="48"
-                    CompactModeThresholdWidth="720" ExpandedModeThresholdWidth="1000"
+                    CompactModeThresholdWidth="720" ExpandedModeThresholdWidth="1180"
                     Background="Transparent" SelectionChanged="Navigation_SelectionChanged">
         <NavigationView.MenuItems>
             <NavigationViewItem Content="设备中心" Tag="devices" IsSelected="True">
@@ -54,7 +54,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                         <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
-                        <Button Content="刷新设备" Click="Refresh_Click" />
+                        <Button Content="刷新设备" Click="Refresh_Click" IsEnabled="{Binding IsIdle}" />
                     </StackPanel>
                 </Grid>
 
@@ -72,7 +72,7 @@
                         <TextBox Grid.Column="1" Header="无线地址" Text="{Binding Endpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  PlaceholderText="192.168.1.20:5555、主机名或 IPv6" />
                         <Button Grid.Column="2" Content="连接设备" VerticalAlignment="Bottom" Click="Connect_Click"
-                                Style="{ThemeResource AccentButtonStyle}" />
+                                IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
                     </Grid>
                 </Border>
 
@@ -87,7 +87,8 @@
                                   IsEditable="True" PlaceholderText="IP:配对端口" />
                         <PasswordBox x:Name="PairingCodeBox" Grid.Column="1" PlaceholderText="六位配对码"
                                      PasswordChanged="PairingCodeBox_PasswordChanged" />
-                        <Button Grid.Column="2" Content="配对" Click="Pair_Click" Style="{ThemeResource AccentButtonStyle}" />
+                        <Button Grid.Column="2" Content="配对" Click="Pair_Click" IsEnabled="{Binding IsIdle}"
+                                Style="{ThemeResource AccentButtonStyle}" />
                     </Grid>
                 </Expander>
                 <Expander Header="镜像质量与录屏" IsExpanded="False">
@@ -120,7 +121,7 @@
 
                 <Grid Grid.Row="3">
                     <ListView ItemsSource="{Binding Devices}" SelectionMode="None" Background="Transparent"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -162,11 +163,12 @@
                                         <Button Grid.Column="3" Content="{Binding MirrorButtonText}" IsEnabled="{Binding IsOnline}"
                                                 CommandParameter="{Binding Serial}" Click="Mirror_Click"
                                                 Style="{ThemeResource AccentButtonStyle}" VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="4" Margin="8,0,0,0" Orientation="Horizontal" Spacing="6">
-                                            <Button Content="TCP/IP" CommandParameter="{Binding Serial}" Click="EnableTcpIp_Click" />
-                                            <Button Content="重启" CommandParameter="{Binding Serial}" Click="Reboot_Click" />
-                                            <Button Content="断开" CommandParameter="{Binding Serial}" Click="Disconnect_Click" />
-                                        </StackPanel>
+                                        <CommandBar Grid.Column="4" Margin="8,0,0,0" Background="Transparent"
+                                                    DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                            <AppBarButton Label="TCP/IP" CommandParameter="{Binding Serial}" Click="EnableTcpIp_Click" />
+                                            <AppBarButton Label="重启" CommandParameter="{Binding Serial}" Click="Reboot_Click" />
+                                            <AppBarButton Label="断开" CommandParameter="{Binding Serial}" Click="Disconnect_Click" />
+                                        </CommandBar>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -250,7 +252,7 @@
                         <TextBlock Text="检查 ADB、scrcpy、mDNS 与潜在版本冲突" Opacity="0.68" />
                     </StackPanel>
                     <Button Grid.Column="1" Content="运行诊断" Click="RunDiagnostics_Click"
-                            Style="{ThemeResource AccentButtonStyle}" VerticalAlignment="Center" />
+                            IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" VerticalAlignment="Center" />
                 </Grid>
                 <ListView Grid.Row="1" Margin="0,22,0,0" ItemsSource="{Binding Diagnostics}"
                           SelectionMode="None" Background="Transparent">
@@ -313,6 +315,7 @@
                                 </StackPanel>
                                 <ComboBox x:Name="TransferDeviceSelector" ItemsSource="{Binding Devices}"
                                           DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
+                                          SelectedValue="{Binding SelectedTransferDeviceSerial, Mode=TwoWay}"
                                           PlaceholderText="选择目标设备" HorizontalAlignment="Stretch" />
                             </StackPanel>
                         </Border>
@@ -345,16 +348,23 @@
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
                                 </ListView>
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <Button Content="选择 APK" Click="ChooseApk_Click" />
-                                    <Button Content="安装 APK" Click="InstallApk_Click"
-                                            Style="{ThemeResource AccentButtonStyle}" />
-                                    <Button Content="选择文件" Click="ChooseFile_Click" Margin="14,0,0,0" />
-                                    <Button Content="推送队列到 Download" Click="PushFile_Click"
-                                            Style="{ThemeResource AccentButtonStyle}" />
-                                    <Button Content="取消传输" Click="CancelTransfer_Click" />
-                                    <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
-                                </StackPanel>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CommandBar Background="Transparent" DefaultLabelPosition="Right"
+                                                IsDynamicOverflowEnabled="True">
+                                        <AppBarButton Label="选择 APK" Click="ChooseApk_Click" IsEnabled="{Binding IsIdle}" />
+                                        <AppBarButton Label="安装 APK" Click="InstallApk_Click" IsEnabled="{Binding IsIdle}" />
+                                        <AppBarButton Label="选择文件" Click="ChooseFile_Click" IsEnabled="{Binding IsIdle}" />
+                                        <AppBarButton Label="推送到 Download" Click="PushFile_Click" IsEnabled="{Binding IsIdle}" />
+                                        <AppBarButton Label="取消传输" Click="CancelTransfer_Click"
+                                                      IsEnabled="{Binding IsTransferRunning}" />
+                                    </CommandBar>
+                                    <ProgressRing Grid.Column="1" Width="22" Height="22" IsActive="{Binding IsBusy}"
+                                                  VerticalAlignment="Center" />
+                                </Grid>
                                 <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
                                          Title="覆盖规则"
                                          Message="安装 APK 使用 -r 保留应用数据；同名文件推送时由 ADB 覆盖目标文件。" />
@@ -389,14 +399,22 @@
                                 <TextBlock Text="目标设备" FontSize="17" FontWeight="SemiBold" />
                                 <ComboBox x:Name="ToolsDeviceSelector" ItemsSource="{Binding Devices}"
                                           DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
+                                          SelectedValue="{Binding SelectedToolsDeviceSerial, Mode=TwoWay}"
                                           PlaceholderText="选择已连接设备" HorizontalAlignment="Stretch" />
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <Button Content="查看设备详情" Click="DeviceDetails_Click"
-                                            Style="{ThemeResource AccentButtonStyle}" />
-                                    <Button Content="保存屏幕截图" Click="SaveScreenshot_Click" />
-                                    <Button Content="导出 Logcat" Click="ExportLogcat_Click" />
-                                    <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
-                                </StackPanel>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CommandBar Background="Transparent" DefaultLabelPosition="Right"
+                                                IsDynamicOverflowEnabled="True">
+                                        <AppBarButton Label="设备详情" Click="DeviceDetails_Click" IsEnabled="{Binding IsIdle}" />
+                                        <AppBarButton Label="保存截图" Click="SaveScreenshot_Click" IsEnabled="{Binding IsIdle}" />
+                                        <AppBarButton Label="导出 Logcat" Click="ExportLogcat_Click" IsEnabled="{Binding IsIdle}" />
+                                    </CommandBar>
+                                    <ProgressRing Grid.Column="1" Width="22" Height="22" IsActive="{Binding IsBusy}"
+                                                  VerticalAlignment="Center" />
+                                </Grid>
                             </StackPanel>
                         </Border>
 
@@ -421,7 +439,8 @@
                                             VerticalAlignment="Bottom" />
                                 </Grid>
                                 <Button Content="开始下载" Click="PullRemoteFile_Click"
-                                        Style="{ThemeResource AccentButtonStyle}" HorizontalAlignment="Left" />
+                                        IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}"
+                                        HorizontalAlignment="Left" />
                                 <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
                                          Title="路径说明"
                                          Message="设备路径必须以 / 开头；下载目录为空时不会执行操作。" />
@@ -480,7 +499,7 @@
                                            TextWrapping="Wrap" Opacity="0.68" />
                                 <TextBlock Text="{Binding UpdateStatusText}" TextWrapping="Wrap" />
                                 <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <Button Content="检查更新" Click="CheckUpdates_Click" />
+                                    <Button Content="检查更新" Click="CheckUpdates_Click" IsEnabled="{Binding IsIdle}" />
                                     <Button Content="打开下载页面" Click="OpenUpdate_Click"
                                             Style="{ThemeResource AccentButtonStyle}" />
                                     <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
@@ -495,6 +514,7 @@
             </Grid>
 
             <Grid x:Name="SettingsView" Margin="24,20" MaxWidth="900" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="18">
                     <StackPanel Spacing="4">
                         <TextBlock Text="设置" FontSize="28" FontWeight="SemiBold" />
@@ -548,6 +568,7 @@
                     </Border>
                     <TextBlock Text="设置保存在本机，重新安装便携包不会覆盖已有偏好。" Opacity="0.62" />
                 </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </NavigationView>

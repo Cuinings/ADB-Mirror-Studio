@@ -14,13 +14,13 @@ public sealed partial class MainPage : Page
 {
     private readonly DispatcherTimer _autoRefreshTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private bool _initializingSettings;
+    private bool _shutdown;
     public MainViewModel? ViewModel { get; private set; }
 
     public MainPage()
     {
         InitializeComponent();
         _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
-        _autoRefreshTimer.Start();
     }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -30,12 +30,41 @@ public sealed partial class MainPage : Page
         _initializingSettings = true;
         ViewModel = new MainViewModel(services);
         DataContext = ViewModel;
-        await ViewModel.InitializeAsync();
-        ApplyTheme(ViewModel.Theme, updateSelector: true);
-        AutoRefreshToggle.IsOn = ViewModel.AutoRefresh;
-        AutoReconnectToggle.IsOn = ViewModel.AutoReconnect;
-        _initializingSettings = false;
-        if (!ViewModel.FirstRunCompleted) await ShowFirstRunDialogAsync();
+        try
+        {
+            await ViewModel.InitializeAsync();
+            if (_shutdown) return;
+            ApplyTheme(ViewModel.Theme, updateSelector: true);
+            AutoRefreshToggle.IsOn = ViewModel.AutoRefresh;
+            AutoReconnectToggle.IsOn = ViewModel.AutoReconnect;
+            if (!ViewModel.FirstRunCompleted) await ShowFirstRunDialogAsync();
+            if (!_shutdown) _autoRefreshTimer.Start();
+        }
+        catch (Exception exception)
+        {
+            if (_shutdown) return;
+            CrashLog.Write(exception);
+            await new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "初始化失败",
+                Content = exception.Message,
+                CloseButtonText = "关闭"
+            }.ShowAsync();
+        }
+        finally
+        {
+            _initializingSettings = false;
+        }
+    }
+
+    internal void Shutdown()
+    {
+        if (_shutdown) return;
+        _shutdown = true;
+        _autoRefreshTimer.Stop();
+        _autoRefreshTimer.Tick -= AutoRefreshTimer_Tick;
+        ViewModel?.Dispose();
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
@@ -50,7 +79,7 @@ public sealed partial class MainPage : Page
 
     private async void Mirror_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is null || sender is not Button { CommandParameter: string serial }) return;
+        if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
         await ViewModel.StartMirrorAsync(serial);
     }
 
@@ -71,13 +100,13 @@ public sealed partial class MainPage : Page
 
     private async void Disconnect_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is null || sender is not Button { CommandParameter: string serial }) return;
+        if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
         await ViewModel.DisconnectAsync(serial);
     }
 
     private async void Reboot_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is null || sender is not Button { CommandParameter: string serial }) return;
+        if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
@@ -92,7 +121,7 @@ public sealed partial class MainPage : Page
 
     private async void EnableTcpIp_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is null || sender is not Button { CommandParameter: string serial }) return;
+        if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
         var portBox = new NumberBox
         {
             Header = "监听端口",
@@ -118,9 +147,15 @@ public sealed partial class MainPage : Page
 
     private async void StopMirror_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is null || sender is not Button { CommandParameter: string serial }) return;
+        if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
         await ViewModel.StopMirrorAsync(serial);
     }
+
+    private static string? GetCommandSerial(object sender) => sender switch
+    {
+        Button { CommandParameter: string serial } => serial,
+        _ => null
+    };
 
     private async void RunDiagnostics_Click(object sender, RoutedEventArgs e)
     {
@@ -211,12 +246,12 @@ public sealed partial class MainPage : Page
 
     private async void InstallApk_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null) await ViewModel.InstallApkAsync(TransferDeviceSelector.SelectedValue as string);
+        if (ViewModel is not null) await ViewModel.InstallApkAsync(ViewModel.SelectedTransferDeviceSerial);
     }
 
     private async void PushFile_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null) await ViewModel.PushFileAsync(TransferDeviceSelector.SelectedValue as string);
+        if (ViewModel is not null) await ViewModel.PushFileAsync(ViewModel.SelectedTransferDeviceSerial);
     }
 
     private void CancelTransfer_Click(object sender, RoutedEventArgs e) => ViewModel?.CancelTransfer();
@@ -224,7 +259,7 @@ public sealed partial class MainPage : Page
     private async void DeviceDetails_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is null) return;
-        var details = await ViewModel.GetDeviceDetailsAsync(ToolsDeviceSelector.SelectedValue as string);
+        var details = await ViewModel.GetDeviceDetailsAsync(ViewModel.SelectedToolsDeviceSerial);
         if (details is null) return;
 
         var battery = details.BatteryLevel is null
@@ -260,7 +295,7 @@ public sealed partial class MainPage : Page
         var file = await picker.PickSaveFileAsync();
         if (file is not null)
         {
-            await ViewModel.CaptureScreenshotAsync(ToolsDeviceSelector.SelectedValue as string, file.Path);
+            await ViewModel.CaptureScreenshotAsync(ViewModel.SelectedToolsDeviceSerial, file.Path);
         }
     }
 
@@ -277,7 +312,7 @@ public sealed partial class MainPage : Page
         var file = await picker.PickSaveFileAsync();
         if (file is not null)
         {
-            await ViewModel.ExportLogcatAsync(ToolsDeviceSelector.SelectedValue as string, file.Path);
+            await ViewModel.ExportLogcatAsync(ViewModel.SelectedToolsDeviceSerial, file.Path);
         }
     }
 
@@ -295,7 +330,7 @@ public sealed partial class MainPage : Page
     {
         if (ViewModel is not null)
         {
-            await ViewModel.PullRemoteFileAsync(ToolsDeviceSelector.SelectedValue as string);
+            await ViewModel.PullRemoteFileAsync(ViewModel.SelectedToolsDeviceSerial);
         }
     }
 
@@ -354,7 +389,7 @@ public sealed partial class MainPage : Page
 
     private async void AutoRefreshTimer_Tick(object? sender, object e)
     {
-        if (ViewModel is { AutoRefresh: true, IsBusy: false }) await ViewModel.RefreshAsync();
+        if (!_shutdown && ViewModel is { AutoRefresh: true, IsBusy: false }) await ViewModel.RefreshAsync();
     }
 
     private async Task ShowFirstRunDialogAsync()

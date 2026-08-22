@@ -32,9 +32,21 @@ public sealed class JsonAppSettingsStoreTests : IDisposable
         Assert.Equal(AppSettings.Default, actual);
     }
 
+    [Fact]
+    public async Task Load_LockedFile_ReturnsDefaults()
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "settings.json");
+        await File.WriteAllTextAsync(path, "{}");
+        await using var lockStream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        var actual = await new JsonAppSettingsStore(path).LoadAsync();
+
+        Assert.Equal(AppSettings.Default, actual);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
     }
 }
-

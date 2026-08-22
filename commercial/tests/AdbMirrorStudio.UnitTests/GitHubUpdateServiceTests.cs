@@ -31,6 +31,18 @@ public sealed class GitHubUpdateServiceTests
         Assert.Equal("V1.0.0", update.CurrentVersion);
     }
 
+    [Fact]
+    public async Task CheckAsync_NormalizesTwoComponentReleaseTag()
+    {
+        using var client = ClientFor("V1.0");
+        var service = new GitHubUpdateService(client, "V1.0.0", "owner", "repo");
+
+        var update = await service.CheckAsync();
+
+        Assert.False(update.IsUpdateAvailable);
+        Assert.Equal("V1.0.0", update.LatestVersion);
+    }
+
     private static HttpClient ClientFor(string tag) => new(new StubHandler($$"""
         {
           "tag_name": "{{tag}}",

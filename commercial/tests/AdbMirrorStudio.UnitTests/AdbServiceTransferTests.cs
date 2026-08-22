@@ -1,4 +1,5 @@
 using AdbMirrorStudio.Application.Commands;
+using AdbMirrorStudio.Application.Adb;
 using AdbMirrorStudio.Infrastructure.Adb;
 
 namespace AdbMirrorStudio.UnitTests;
@@ -95,6 +96,41 @@ public sealed class AdbServiceTransferTests : IDisposable
     }
 
     [Fact]
+    public async Task CaptureScreenshotAsync_RemovesTemporaryFileWhenCaptureFails()
+    {
+        var adbPath = CreateFile("adb.exe");
+        var runner = new SequenceRunner(
+            new CommandResult(1, string.Empty, "capture failed", TimeSpan.Zero, false, false),
+            new CommandResult(0, string.Empty, string.Empty, TimeSpan.Zero, false, false));
+        var service = new AdbService(runner, adbPath);
+
+        await Assert.ThrowsAsync<AdbCommandException>(() =>
+            service.CaptureScreenshotAsync("device", Path.Combine(_directory, "failed.png")));
+
+        Assert.Equal(2, runner.Requests.Count);
+        Assert.Equal("screencap", runner.Requests[0].Arguments[3]);
+        Assert.Equal("rm", runner.Requests[1].Arguments[3]);
+    }
+
+    [Fact]
+    public async Task GetDeviceDetailsAsync_PrefersOverrideResolution()
+    {
+        var adbPath = CreateFile("adb.exe");
+        var runner = new SequenceRunner(
+            Success("15"),
+            Success("35"),
+            Success("Physical size: 1440x3200\nOverride size: 1080x2400"),
+            Success("level: 88\nstatus: 2"),
+            Success("Filesystem Size Used Avail Use% Mounted on\n/data 100G 40G 60G 40% /data"));
+        var service = new AdbService(runner, adbPath);
+
+        var details = await service.GetDeviceDetailsAsync("device");
+
+        Assert.Equal("1080x2400", details.Resolution);
+        Assert.Equal(88, details.BatteryLevel);
+    }
+
+    [Fact]
     public async Task GetLogcatSnapshotAsync_UsesBoundedLineCount()
     {
         var adbPath = CreateFile("adb.exe");
@@ -114,6 +150,9 @@ public sealed class AdbServiceTransferTests : IDisposable
         return path;
     }
 
+    private static CommandResult Success(string output) =>
+        new(0, output, string.Empty, TimeSpan.Zero, false, false);
+
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
     private sealed class CapturingRunner(string output) : ICommandRunner
@@ -126,6 +165,18 @@ public sealed class AdbServiceTransferTests : IDisposable
             LastRequest = request;
             Requests.Add(request);
             return Task.FromResult(new CommandResult(0, output, string.Empty, TimeSpan.Zero, false, false));
+        }
+    }
+
+    private sealed class SequenceRunner(params CommandResult[] results) : ICommandRunner
+    {
+        private readonly Queue<CommandResult> _results = new(results);
+        public List<CommandRequest> Requests { get; } = [];
+
+        public Task<CommandResult> RunAsync(CommandRequest request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return Task.FromResult(_results.Dequeue());
         }
     }
 }

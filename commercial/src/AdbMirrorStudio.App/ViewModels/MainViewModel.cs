@@ -13,7 +13,7 @@ using AdbMirrorStudio.Domain.Settings;
 
 namespace AdbMirrorStudio.App.ViewModels;
 
-public sealed class MainViewModel : INotifyPropertyChanged
+public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IAdbService _adb;
     private readonly IMirrorSessionManager _mirrorSessions;
@@ -24,6 +24,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly SynchronizationContext _uiContext;
     private CancellationTokenSource? _refreshCancellation;
     private CancellationTokenSource? _transferCancellation;
+    private int _busyCount;
+    private int _transferRunning;
+    private bool _disposed;
     private bool _isBusy;
     private string _statusText = "正在初始化设备服务…";
     private string _endpoint = "192.168.1.100:5555";
@@ -37,6 +40,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private bool _updateAvailable;
     private string _remoteFilePath = "/sdcard/Download/";
     private string _localDownloadDirectory = string.Empty;
+    private string? _selectedTransferDeviceSerial;
+    private string? _selectedToolsDeviceSerial;
     private AppSettings _settings = AppSettings.Default;
 
     public MainViewModel(AppServices services)
@@ -63,8 +68,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool IsBusy
     {
         get => _isBusy;
-        private set => SetField(ref _isBusy, value);
+        private set
+        {
+            if (SetField(ref _isBusy, value)) OnPropertyChanged(nameof(IsIdle));
+        }
     }
+    public bool IsIdle => !IsBusy;
+    public bool IsTransferRunning => Volatile.Read(ref _transferRunning) != 0;
 
     public string StatusText
     {
@@ -146,10 +156,21 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => _localDownloadDirectory;
         set => SetField(ref _localDownloadDirectory, value);
     }
+    public string? SelectedTransferDeviceSerial
+    {
+        get => _selectedTransferDeviceSerial;
+        set => SetField(ref _selectedTransferDeviceSerial, value);
+    }
+    public string? SelectedToolsDeviceSerial
+    {
+        get => _selectedToolsDeviceSerial;
+        set => SetField(ref _selectedToolsDeviceSerial, value);
+    }
 
     public async Task InitializeAsync()
     {
         _settings = await _settingsStore.LoadAsync();
+        if (_disposed) return;
         Endpoint = _settings.LastEndpoint;
         SelectedMirrorProfileId = MirrorProfile.Presets.Any(profile => profile.Id == _settings.MirrorProfileId)
             ? _settings.MirrorProfileId
@@ -158,7 +179,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(AutoRefresh));
         OnPropertyChanged(nameof(AutoReconnect));
         await DiscoverAsync();
+        if (_disposed) return;
         await RefreshAsync();
+        if (_disposed) return;
         if (_settings.AutoReconnect && _settings.HasConnectedBefore && Devices.All(device => device.Serial != Endpoint))
         {
             await ConnectAsync();
@@ -174,7 +197,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         _settings = _settings with { Theme = theme };
         OnPropertyChanged(nameof(Theme));
-        await _settingsStore.SaveAsync(_settings);
+        await SaveSettingsSafelyAsync();
     }
 
     public async Task SetAutoRefreshAsync(bool enabled)
@@ -182,7 +205,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (_settings.AutoRefresh == enabled) return;
         _settings = _settings with { AutoRefresh = enabled };
         OnPropertyChanged(nameof(AutoRefresh));
-        await _settingsStore.SaveAsync(_settings);
+        await SaveSettingsSafelyAsync();
         StatusText = enabled ? "已启用设备自动刷新（每 5 秒）" : "已关闭设备自动刷新";
     }
 
@@ -191,7 +214,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (_settings.AutoReconnect == enabled) return;
         _settings = _settings with { AutoReconnect = enabled };
         OnPropertyChanged(nameof(AutoReconnect));
-        await _settingsStore.SaveAsync(_settings);
+        await SaveSettingsSafelyAsync();
         StatusText = enabled ? "已启用历史无线设备自动重连" : "已关闭自动重连";
     }
 
@@ -200,7 +223,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (!MirrorProfile.Presets.Any(profile => profile.Id == profileId)) return;
         SelectedMirrorProfileId = profileId;
         _settings = _settings with { MirrorProfileId = profileId };
-        await _settingsStore.SaveAsync(_settings);
+        await SaveSettingsSafelyAsync();
         StatusText = $"镜像预设已切换为 {MirrorProfile.Presets.First(profile => profile.Id == profileId).Name}";
     }
 
@@ -209,7 +232,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (_settings.FirstRunCompleted) return;
         _settings = _settings with { FirstRunCompleted = true };
         OnPropertyChanged(nameof(FirstRunCompleted));
-        await _settingsStore.SaveAsync(_settings);
+        await SaveSettingsSafelyAsync();
     }
 
     public async Task InstallApkAsync(string? serial)
@@ -220,7 +243,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在向 {serial} 安装 APK…";
         try
         {
@@ -233,7 +256,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
@@ -242,6 +265,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public void SetTransferFiles(IEnumerable<string> paths)
     {
+        if (IsTransferRunning)
+        {
+            StatusText = "文件传输进行中，完成或取消后才能更改队列";
+            return;
+        }
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         TransferQueue.Clear();
         foreach (var path in files) TransferQueue.Add(new TransferItemViewModel(path));
@@ -267,9 +295,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        _transferCancellation?.Dispose();
-        _transferCancellation = new CancellationTokenSource();
-        IsBusy = true;
+        if (Interlocked.CompareExchange(ref _transferRunning, 1, 0) != 0)
+        {
+            StatusText = "已有文件传输任务正在运行";
+            return;
+        }
+        OnPropertyChanged(nameof(IsTransferRunning));
+
+        var transferCancellation = new CancellationTokenSource();
+        _transferCancellation = transferCancellation;
+        EnterBusy();
         StatusText = $"正在向 {serial} 推送 {TransferQueue.Count} 个文件…";
         var completed = 0;
         var failed = 0;
@@ -277,11 +312,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             foreach (var item in TransferQueue)
             {
-                _transferCancellation.Token.ThrowIfCancellationRequested();
+                transferCancellation.Token.ThrowIfCancellationRequested();
                 item.Status = "传输中";
                 try
                 {
-                    await _adb.PushFileAsync(serial, item.Path, cancellationToken: _transferCancellation.Token);
+                    await _adb.PushFileAsync(serial, item.Path, cancellationToken: transferCancellation.Token);
                     item.Status = "已完成";
                     item.IsComplete = true;
                     completed++;
@@ -313,13 +348,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            if (ReferenceEquals(_transferCancellation, transferCancellation)) _transferCancellation = null;
+            transferCancellation.Dispose();
+            Interlocked.Exchange(ref _transferRunning, 0);
+            OnPropertyChanged(nameof(IsTransferRunning));
+            ExitBusy();
         }
     }
 
     public void CancelTransfer()
     {
-        _transferCancellation?.Cancel();
+        if (_transferCancellation is null)
+        {
+            StatusText = "当前没有文件传输任务";
+            return;
+        }
+        _transferCancellation.Cancel();
         StatusText = "正在取消文件传输…";
     }
 
@@ -355,7 +399,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在配对 {PairEndpoint}…";
         try
         {
@@ -370,12 +414,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         finally
         {
             PairingCode = string.Empty;
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
     public async Task DisconnectAsync(string serial)
     {
+        EnterBusy();
         StatusText = $"正在断开 {serial}…";
         try
         {
@@ -387,11 +432,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             StatusText = $"断开失败：{exception.Message}";
         }
+        finally
+        {
+            ExitBusy();
+        }
     }
 
     public async Task RebootAsync(string serial)
     {
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在重启 {serial}…";
         try
         {
@@ -404,13 +453,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
     public async Task EnableTcpIpAsync(string serial, int port)
     {
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在让 {serial} 监听 TCP/IP 端口 {port}…";
         try
         {
@@ -425,29 +474,44 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
     public async Task RefreshAsync()
     {
-        _refreshCancellation?.Cancel();
-        _refreshCancellation?.Dispose();
-        _refreshCancellation = new CancellationTokenSource();
-        IsBusy = true;
+        var refreshCancellation = new CancellationTokenSource();
+        var previousCancellation = Interlocked.Exchange(ref _refreshCancellation, refreshCancellation);
+        previousCancellation?.Cancel();
+        previousCancellation?.Dispose();
+        EnterBusy();
         StatusText = "正在刷新设备…";
 
         try
         {
-            var snapshot = await _refreshCoordinator.RefreshAsync(_refreshCancellation.Token);
+            var snapshot = await _refreshCoordinator.RefreshAsync(refreshCancellation.Token);
             if (snapshot is null) return;
 
             var running = _mirrorSessions.ActiveSessions.Select(session => session.DeviceSerial).ToHashSet(StringComparer.Ordinal);
+            var selectedTransfer = SelectedTransferDeviceSerial;
+            var selectedTools = SelectedToolsDeviceSerial;
             Devices.Clear();
             foreach (var device in snapshot.Devices)
             {
                 Devices.Add(new DeviceCardViewModel(device, running.Contains(device.Serial)));
             }
+
+            var onlineSerials = snapshot.Devices
+                .Where(device => device.State == DeviceState.Online)
+                .Select(device => device.Serial)
+                .ToHashSet(StringComparer.Ordinal);
+            var fallbackSerial = snapshot.Devices.FirstOrDefault(device => device.State == DeviceState.Online)?.Serial;
+            SelectedTransferDeviceSerial = selectedTransfer is not null && onlineSerials.Contains(selectedTransfer)
+                ? selectedTransfer
+                : fallbackSerial;
+            SelectedToolsDeviceSerial = selectedTools is not null && onlineSerials.Contains(selectedTools)
+                ? selectedTools
+                : fallbackSerial;
 
             StatusText = snapshot.Devices.Count == 0
                 ? "未发现设备，可通过 USB 或无线地址连接"
@@ -456,28 +520,38 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         catch (OperationCanceledException)
         {
-            StatusText = "刷新已取消";
+            if (ReferenceEquals(Volatile.Read(ref _refreshCancellation), refreshCancellation))
+            {
+                StatusText = "刷新已取消";
+            }
         }
         catch (Exception exception)
         {
-            StatusText = $"刷新失败：{exception.Message}";
+            if (ReferenceEquals(Volatile.Read(ref _refreshCancellation), refreshCancellation))
+            {
+                StatusText = $"刷新失败：{exception.Message}";
+            }
         }
         finally
         {
-            IsBusy = false;
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _refreshCancellation, null, refreshCancellation), refreshCancellation))
+            {
+                refreshCancellation.Dispose();
+            }
+            ExitBusy();
         }
     }
 
     public async Task ConnectAsync()
     {
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在连接 {Endpoint}…";
         try
         {
             var result = await _adb.ConnectAsync(Endpoint);
             StatusText = result;
             _settings = _settings with { LastEndpoint = Endpoint.Trim(), HasConnectedBefore = true };
-            await _settingsStore.SaveAsync(_settings);
+            await SaveSettingsSafelyAsync();
             await RefreshAsync();
         }
         catch (Exception exception)
@@ -486,12 +560,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
     public async Task StartMirrorAsync(string serial)
     {
+        EnterBusy();
         StatusText = $"正在启动 {serial} 的镜像…";
         try
         {
@@ -508,10 +583,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             StatusText = $"镜像启动失败：{exception.Message}";
         }
+        finally
+        {
+            ExitBusy();
+        }
     }
 
     public async Task StopMirrorAsync(string serial)
     {
+        EnterBusy();
         StatusText = $"正在停止 {serial} 的镜像…";
         try
         {
@@ -522,11 +602,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             StatusText = $"停止镜像失败：{exception.Message}";
         }
+        finally
+        {
+            ExitBusy();
+        }
     }
 
     public async Task RunDiagnosticsAsync()
     {
-        IsBusy = true;
+        EnterBusy();
         StatusText = "正在运行环境诊断…";
         try
         {
@@ -553,13 +637,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
     public async Task CheckForUpdatesAsync()
     {
-        IsBusy = true;
+        EnterBusy();
         UpdateStatusText = "正在检查 GitHub Release…";
         try
         {
@@ -578,7 +662,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
@@ -589,7 +673,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             StatusText = "请选择一台目标设备";
             return null;
         }
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在读取 {serial} 的设备信息…";
         try
         {
@@ -604,7 +688,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
@@ -615,7 +699,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             StatusText = "请选择一台目标设备";
             return;
         }
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在截取 {serial} 的屏幕…";
         try
         {
@@ -628,7 +712,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
@@ -639,7 +723,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             StatusText = "请选择一台目标设备";
             return;
         }
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在导出 {serial} 的 Logcat…";
         try
         {
@@ -653,7 +737,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            IsBusy = false;
+            ExitBusy();
         }
     }
 
@@ -664,7 +748,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             StatusText = "请选择一台目标设备";
             return;
         }
-        IsBusy = true;
+        EnterBusy();
         StatusText = $"正在从 {serial} 下载 {RemoteFilePath}…";
         try
         {
@@ -677,14 +761,54 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
+            ExitBusy();
+        }
+    }
+
+    private async Task SaveSettingsSafelyAsync()
+    {
+        try
+        {
+            await _settingsStore.SaveAsync(_settings);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            StatusText = $"设置暂时无法保存：{exception.Message}";
+        }
+    }
+
+    private void EnterBusy()
+    {
+        if (Interlocked.Increment(ref _busyCount) == 1) IsBusy = true;
+    }
+
+    private void ExitBusy()
+    {
+        var remaining = Interlocked.Decrement(ref _busyCount);
+        if (remaining <= 0)
+        {
+            Interlocked.Exchange(ref _busyCount, 0);
             IsBusy = false;
         }
     }
 
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _mirrorSessions.SessionChanged -= OnSessionChanged;
+        var refreshCancellation = Interlocked.Exchange(ref _refreshCancellation, null);
+        refreshCancellation?.Cancel();
+        refreshCancellation?.Dispose();
+        _transferCancellation?.Cancel();
+    }
+
     private void OnSessionChanged(object? sender, MirrorSession session)
     {
+        if (_disposed) return;
         _uiContext.Post(_ =>
         {
+            if (_disposed) return;
             var card = Devices.FirstOrDefault(device => device.Serial == session.DeviceSerial);
             if (card is not null) card.IsMirroring = session.State == MirrorSessionState.Running;
             var existing = Sessions.FirstOrDefault(item => item.DeviceSerial == session.DeviceSerial);

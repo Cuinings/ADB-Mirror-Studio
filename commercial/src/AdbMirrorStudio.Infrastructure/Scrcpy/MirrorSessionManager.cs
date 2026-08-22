@@ -10,6 +10,7 @@ namespace AdbMirrorStudio.Infrastructure.Scrcpy;
 public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPath) : IMirrorSessionManager
 {
     private readonly ConcurrentDictionary<string, ManagedSession> _sessions = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new(StringComparer.Ordinal);
     private bool _disposed;
 
     public event EventHandler<MirrorSession>? SessionChanged;
@@ -27,74 +28,89 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceSerial);
         if (!File.Exists(scrcpyPath)) throw new FileNotFoundException("未找到 scrcpy.exe。", scrcpyPath);
 
-        if (_sessions.TryGetValue(deviceSerial, out var existing) && !existing.Process.HasExited)
-        {
-            return existing.Session;
-        }
-
-        if (!await adbService.IsOnlineAsync(deviceSerial, cancellationToken).ConfigureAwait(false))
-        {
-            throw new InvalidOperationException($"设备 {deviceSerial} 当前不可达。");
-        }
-
-        var arguments = ScrcpyArgumentBuilder.Build(deviceSerial, profile, windowTitle);
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = scrcpyPath,
-            WorkingDirectory = Path.GetDirectoryName(scrcpyPath)!,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
-        startInfo.Environment["PATH"] = $"{startInfo.WorkingDirectory}{Path.PathSeparator}{Environment.GetEnvironmentVariable("PATH")}";
-
-        var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        var session = new MirrorSession(
-            Guid.NewGuid().ToString("N"),
-            deviceSerial,
-            MirrorSessionState.Starting,
-            null,
-            DateTimeOffset.UtcNow);
-        var managed = new ManagedSession(process, session);
-
-        if (!_sessions.TryAdd(deviceSerial, managed))
-        {
-            process.Dispose();
-            return _sessions[deviceSerial].Session;
-        }
-
+        var sessionLock = _sessionLocks.GetOrAdd(deviceSerial, _ => new SemaphoreSlim(1, 1));
+        await sessionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (!process.Start()) throw new InvalidOperationException("scrcpy 进程未能启动。");
-            managed.Session = session with { State = MirrorSessionState.Running, ProcessId = process.Id };
-            RaiseChanged(managed.Session);
-            _ = ObserveExitAsync(deviceSerial, managed);
-            return managed.Session;
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_sessions.TryGetValue(deviceSerial, out var existing))
+            {
+                if (IsRunning(existing.Process)) return existing.Session;
+                _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(deviceSerial, existing));
+            }
+
+            if (!await adbService.IsOnlineAsync(deviceSerial, cancellationToken).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException($"设备 {deviceSerial} 当前不可达。");
+            }
+
+            var arguments = ScrcpyArgumentBuilder.Build(deviceSerial, profile, windowTitle);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = scrcpyPath,
+                WorkingDirectory = Path.GetDirectoryName(scrcpyPath)!,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+            foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
+            startInfo.Environment["PATH"] = $"{startInfo.WorkingDirectory}{Path.PathSeparator}{Environment.GetEnvironmentVariable("PATH")}";
+
+            var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+            var session = new MirrorSession(
+                Guid.NewGuid().ToString("N"),
+                deviceSerial,
+                MirrorSessionState.Starting,
+                null,
+                DateTimeOffset.UtcNow);
+            var managed = new ManagedSession(process, session);
+            _sessions[deviceSerial] = managed;
+
+            try
+            {
+                if (!process.Start()) throw new InvalidOperationException("scrcpy 进程未能启动。");
+                managed.Session = session with { State = MirrorSessionState.Running, ProcessId = process.Id };
+                RaiseChanged(managed.Session);
+                _ = ObserveExitAsync(deviceSerial, managed);
+                return managed.Session;
+            }
+            catch (Exception exception)
+            {
+                _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(deviceSerial, managed));
+                managed.Session = session with { State = MirrorSessionState.Failed, Error = exception.Message };
+                RaiseChanged(managed.Session);
+                process.Dispose();
+                throw;
+            }
         }
-        catch (Exception exception)
+        finally
         {
-            _sessions.TryRemove(deviceSerial, out _);
-            managed.Session = session with { State = MirrorSessionState.Failed, Error = exception.Message };
-            RaiseChanged(managed.Session);
-            process.Dispose();
-            throw;
+            sessionLock.Release();
         }
     }
 
     public async Task StopAsync(string deviceSerial, CancellationToken cancellationToken = default)
     {
-        if (!_sessions.TryGetValue(deviceSerial, out var managed)) return;
-        managed.Session = managed.Session with { State = MirrorSessionState.Stopping };
-        RaiseChanged(managed.Session);
-
-        if (!managed.Process.HasExited)
+        var sessionLock = _sessionLocks.GetOrAdd(deviceSerial, _ => new SemaphoreSlim(1, 1));
+        await sessionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            managed.Process.Kill(entireProcessTree: true);
-            await managed.Process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            if (!_sessions.TryGetValue(deviceSerial, out var managed)) return;
+            managed.Session = managed.Session with { State = MirrorSessionState.Stopping };
+            RaiseChanged(managed.Session);
+
+            if (IsRunning(managed.Process))
+            {
+                managed.Process.Kill(entireProcessTree: true);
+                await managed.Process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            sessionLock.Release();
         }
     }
 
@@ -124,8 +140,29 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         }
         finally
         {
-            _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(serial, managed));
-            managed.Process.Dispose();
+            var sessionLock = _sessionLocks.GetOrAdd(serial, _ => new SemaphoreSlim(1, 1));
+            await sessionLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(serial, managed));
+                managed.Process.Dispose();
+            }
+            finally
+            {
+                sessionLock.Release();
+            }
+        }
+    }
+
+    private static bool IsRunning(Process process)
+    {
+        try
+        {
+            return !process.HasExited;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException)
+        {
+            return false;
         }
     }
 
@@ -152,4 +189,3 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         public MirrorSession Session { get; set; } = session;
     }
 }
-

@@ -9,7 +9,9 @@ using AdbMirrorStudio.Infrastructure.Processes;
 using AdbMirrorStudio.Infrastructure.Persistence;
 using AdbMirrorStudio.Infrastructure.Scrcpy;
 using AdbMirrorStudio.Infrastructure.Updates;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using System.Diagnostics;
 
 namespace AdbMirrorStudio.App;
 
@@ -18,6 +20,8 @@ public partial class App : Microsoft.UI.Xaml.Application
     private MainWindow? _window;
     private IMirrorSessionManager? _mirrorSessions;
     private HttpClient? _httpClient;
+    private string? _toolsDirectory;
+    private bool _shuttingDown;
     internal MainWindow? MainWindow => _window;
 
     public App()
@@ -31,6 +35,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         try
         {
             var toolsDirectory = Path.Combine(AppContext.BaseDirectory, "Tools");
+            _toolsDirectory = toolsDirectory;
             var runner = new ProcessCommandRunner();
             var adbPath = Path.Combine(toolsDirectory, "adb.exe");
             var scrcpyPath = Path.Combine(toolsDirectory, "scrcpy.exe");
@@ -49,7 +54,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                 "settings.json"));
 
             _window = new MainWindow(new AppServices(adb, _mirrorSessions, settings, diagnostics, updates));
-            _window.Closed += OnWindowClosed;
+            _window.AppWindow.Closing += OnAppWindowClosing;
             _window.Activate();
         }
         catch (Exception exception)
@@ -59,10 +64,61 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
     }
 
-    private async void OnWindowClosed(object sender, WindowEventArgs args)
+    private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (_mirrorSessions is not null) await _mirrorSessions.DisposeAsync();
-        _httpClient?.Dispose();
+        if (_shuttingDown) return;
+        _shuttingDown = true;
+
+        try
+        {
+            _window?.PrepareForShutdown();
+            if (_mirrorSessions is not null) _mirrorSessions.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            if (_toolsDirectory is not null) StopBundledToolProcesses(_toolsDirectory);
+        }
+        catch (Exception exception)
+        {
+            CrashLog.Write(exception);
+        }
+        finally
+        {
+            _httpClient?.Dispose();
+        }
+    }
+
+    private static void StopBundledToolProcesses(string toolsDirectory)
+    {
+        var normalizedToolsDirectory = Path.GetFullPath(toolsDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            foreach (var processName in new[] { "adb", "scrcpy" })
+            {
+                foreach (var process in Process.GetProcessesByName(processName))
+                {
+                    using (process)
+                    {
+                        try
+                        {
+                            var executable = process.MainModule?.FileName;
+                            if (string.IsNullOrWhiteSpace(executable)
+                                || !Path.GetFullPath(executable).StartsWith(normalizedToolsDirectory, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+                            if (!process.HasExited) process.Kill(entireProcessTree: true);
+                            process.WaitForExit(5000);
+                        }
+                        catch (Exception exception) when (exception is InvalidOperationException
+                                                           or System.ComponentModel.Win32Exception
+                                                           or NotSupportedException)
+                        {
+                            // A process may exit or become inaccessible while the app is closing.
+                        }
+                    }
+                }
+            }
+            if (attempt < 2) Thread.Sleep(150);
+        }
     }
 }
 

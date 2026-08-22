@@ -41,11 +41,17 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
         return FirstOutput(result);
     }
 
-    public async Task DisconnectAsync(string serial, CancellationToken cancellationToken = default) =>
-        _ = await ExecuteAsync(["disconnect", serial], TimeSpan.FromSeconds(15), cancellationToken);
+    public async Task DisconnectAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        _ = await ExecuteAsync(["disconnect", serial.Trim()], TimeSpan.FromSeconds(15), cancellationToken);
+    }
 
-    public async Task RebootAsync(string serial, CancellationToken cancellationToken = default) =>
-        _ = await ExecuteAsync(["-s", serial, "reboot"], TimeSpan.FromSeconds(30), cancellationToken);
+    public async Task RebootAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        _ = await ExecuteAsync(["-s", serial.Trim(), "reboot"], TimeSpan.FromSeconds(30), cancellationToken);
+    }
 
     public async Task<string> EnableTcpIpAsync(string serial, int port = 5555, CancellationToken cancellationToken = default)
     {
@@ -143,9 +149,9 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
         var fullPath = Path.GetFullPath(localPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var remotePath = $"/data/local/tmp/adb-mirror-{Guid.NewGuid():N}.png";
-        await ExecuteAsync(["-s", serial.Trim(), "shell", "screencap", "-p", remotePath], TimeSpan.FromSeconds(30), cancellationToken);
         try
         {
+            await ExecuteAsync(["-s", serial.Trim(), "shell", "screencap", "-p", remotePath], TimeSpan.FromSeconds(30), cancellationToken);
             await ExecuteAsync(["-s", serial.Trim(), "pull", remotePath, fullPath], TimeSpan.FromMinutes(2), cancellationToken);
             return fullPath;
         }
@@ -260,8 +266,10 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
 
     private static string ParseResolution(string output)
     {
-        var line = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault(value => value.Contains("size:", StringComparison.OrdinalIgnoreCase));
+        var lines = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        var line = lines.FirstOrDefault(value => value.Contains("Override size:", StringComparison.OrdinalIgnoreCase))
+            ?? lines.FirstOrDefault(value => value.Contains("Physical size:", StringComparison.OrdinalIgnoreCase))
+            ?? lines.FirstOrDefault(value => value.Contains("size:", StringComparison.OrdinalIgnoreCase));
         return line is null ? "—" : line[(line.IndexOf(':') + 1)..].Trim();
     }
 

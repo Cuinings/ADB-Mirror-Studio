@@ -13,7 +13,7 @@ public sealed class GitHubUpdateService(
 {
     public async Task<AppUpdateInfo> CheckAsync(CancellationToken cancellationToken = default)
     {
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             $"https://api.github.com/repos/{owner}/{repository}/releases/latest");
         request.Headers.UserAgent.ParseAdd("ADB-Mirror-Studio-UpdateChecker/1.0");
@@ -48,8 +48,11 @@ public sealed class GitHubUpdateService(
             : throw new FormatException($"无法识别版本号：{value}");
     }
 
-    private static string NormalizeDisplayVersion(string value) =>
-        $"V{ParseVersion(value).ToString(3)}";
+    private static string NormalizeDisplayVersion(string value)
+    {
+        var version = ParseVersion(value);
+        return $"V{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+    }
 
 }
 

@@ -47,4 +47,14 @@ public sealed class ScrcpyArgumentBuilderTests
         var profile = MirrorProfile.Balanced with { RecordPath = "recording.avi" };
         Assert.Throws<ArgumentException>(() => ScrcpyArgumentBuilder.Build("device", profile));
     }
+
+    [Fact]
+    public void Build_AcceptsUppercaseRecordingContainer()
+    {
+        var profile = MirrorProfile.Balanced with { RecordPath = "recording.MP4" };
+
+        var arguments = ScrcpyArgumentBuilder.Build("device", profile);
+
+        Assert.Contains($"--record={Path.GetFullPath("recording.MP4")}", arguments);
+    }
 }

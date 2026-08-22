@@ -22,7 +22,7 @@ public sealed class JsonAppSettingsStore(string filePath) : IAppSettingsStore
                     cancellationToken)
                 .ConfigureAwait(false) ?? AppSettings.Default;
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
             return AppSettings.Default;
         }
@@ -61,7 +61,14 @@ public sealed class JsonAppSettingsStore(string filePath) : IAppSettingsStore
         }
         finally
         {
-            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            try
+            {
+                if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            }
+            catch (IOException)
+            {
+                // Preserve the primary save result when a scanner briefly locks the temporary file.
+            }
             _gate.Release();
         }
     }

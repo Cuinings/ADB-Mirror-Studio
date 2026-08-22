@@ -14,6 +14,8 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 
 便携发布包为自包含版本，无需另外安装 Python、.NET、ADB 或 scrcpy。
 
+正常退出会停止本程序启动的镜像会话，并清理发布包 `Tools` 目录中的 ADB/scrcpy 进程，因此可以直接移动、覆盖或删除完整解压目录。系统中来自其他目录的 ADB 不会被终止。
+
 ## 功能概览
 
 ### 设备连接
