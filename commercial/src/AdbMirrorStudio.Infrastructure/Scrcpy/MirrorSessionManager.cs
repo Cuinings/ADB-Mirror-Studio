@@ -4,6 +4,7 @@ using System.Text;
 using AdbMirrorStudio.Application.Adb;
 using AdbMirrorStudio.Application.Mirroring;
 using AdbMirrorStudio.Domain.Mirroring;
+using AdbMirrorStudio.Infrastructure.Processes;
 
 namespace AdbMirrorStudio.Infrastructure.Scrcpy;
 
@@ -118,8 +119,8 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
     {
         try
         {
-            var stdoutTask = managed.Process.StandardOutput.ReadToEndAsync();
-            var stderrTask = managed.Process.StandardError.ReadToEndAsync();
+            var stdoutTask = BoundedTextTailReader.ReadAsync(managed.Process.StandardOutput);
+            var stderrTask = BoundedTextTailReader.ReadAsync(managed.Process.StandardError);
             await managed.Process.WaitForExitAsync().ConfigureAwait(false);
             var stdout = await stdoutTask.ConfigureAwait(false);
             var stderr = await stderrTask.ConfigureAwait(false);

@@ -108,24 +108,32 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
     public async Task<DeviceDetails> GetDeviceDetailsAsync(string serial, CancellationToken cancellationToken = default)
     {
         ValidateSerial(serial);
-        var android = FirstOutput(await ExecuteAsync(
-            ["-s", serial.Trim(), "shell", "getprop", "ro.build.version.release"],
-            TimeSpan.FromSeconds(10), cancellationToken));
-        var api = FirstOutput(await ExecuteAsync(
-            ["-s", serial.Trim(), "shell", "getprop", "ro.build.version.sdk"],
-            TimeSpan.FromSeconds(10), cancellationToken));
-        var sizeOutput = FirstOutput(await ExecuteAsync(
-            ["-s", serial.Trim(), "shell", "wm", "size"],
-            TimeSpan.FromSeconds(10), cancellationToken));
-        var batteryOutput = FirstOutput(await ExecuteAsync(
-            ["-s", serial.Trim(), "shell", "dumpsys", "battery"],
-            TimeSpan.FromSeconds(10), cancellationToken));
-        var storageOutput = FirstOutput(await ExecuteAsync(
-            ["-s", serial.Trim(), "shell", "df", "-h", "/data"],
-            TimeSpan.FromSeconds(15), cancellationToken));
+        var normalizedSerial = serial.Trim();
+        var androidTask = ExecuteAsync(
+            ["-s", normalizedSerial, "shell", "getprop", "ro.build.version.release"],
+            TimeSpan.FromSeconds(10), cancellationToken);
+        var apiTask = ExecuteAsync(
+            ["-s", normalizedSerial, "shell", "getprop", "ro.build.version.sdk"],
+            TimeSpan.FromSeconds(10), cancellationToken);
+        var sizeTask = ExecuteAsync(
+            ["-s", normalizedSerial, "shell", "wm", "size"],
+            TimeSpan.FromSeconds(10), cancellationToken);
+        var batteryTask = ExecuteAsync(
+            ["-s", normalizedSerial, "shell", "dumpsys", "battery"],
+            TimeSpan.FromSeconds(10), cancellationToken);
+        var storageTask = ExecuteAsync(
+            ["-s", normalizedSerial, "shell", "df", "-h", "/data"],
+            TimeSpan.FromSeconds(15), cancellationToken);
+
+        await Task.WhenAll(androidTask, apiTask, sizeTask, batteryTask, storageTask).ConfigureAwait(false);
+        var android = FirstOutput(await androidTask.ConfigureAwait(false));
+        var api = FirstOutput(await apiTask.ConfigureAwait(false));
+        var sizeOutput = FirstOutput(await sizeTask.ConfigureAwait(false));
+        var batteryOutput = FirstOutput(await batteryTask.ConfigureAwait(false));
+        var storageOutput = FirstOutput(await storageTask.ConfigureAwait(false));
 
         return new DeviceDetails(
-            serial.Trim(),
+            normalizedSerial,
             EmptyFallback(android),
             EmptyFallback(api),
             ParseResolution(sizeOutput),

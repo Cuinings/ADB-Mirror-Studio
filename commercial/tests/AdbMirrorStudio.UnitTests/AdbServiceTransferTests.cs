@@ -131,6 +131,19 @@ public sealed class AdbServiceTransferTests : IDisposable
     }
 
     [Fact]
+    public async Task GetDeviceDetailsAsync_CollectsIndependentFieldsConcurrently()
+    {
+        var adbPath = CreateFile("adb.exe");
+        var runner = new ConcurrentDetailsRunner();
+        var service = new AdbService(runner, adbPath);
+
+        await service.GetDeviceDetailsAsync("device");
+
+        Assert.True(runner.MaxConcurrency > 1);
+        Assert.Equal(5, runner.RequestCount);
+    }
+
+    [Fact]
     public async Task GetLogcatSnapshotAsync_UsesBoundedLineCount()
     {
         var adbPath = CreateFile("adb.exe");
@@ -177,6 +190,36 @@ public sealed class AdbServiceTransferTests : IDisposable
         {
             Requests.Add(request);
             return Task.FromResult(_results.Dequeue());
+        }
+    }
+
+    private sealed class ConcurrentDetailsRunner : ICommandRunner
+    {
+        private int _active;
+        private int _maxConcurrency;
+        private int _requestCount;
+        public int MaxConcurrency => Volatile.Read(ref _maxConcurrency);
+        public int RequestCount => Volatile.Read(ref _requestCount);
+
+        public async Task<CommandResult> RunAsync(CommandRequest request, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _requestCount);
+            var active = Interlocked.Increment(ref _active);
+            while (true)
+            {
+                var maximum = Volatile.Read(ref _maxConcurrency);
+                if (active <= maximum || Interlocked.CompareExchange(ref _maxConcurrency, active, maximum) == maximum) break;
+            }
+
+            try
+            {
+                await Task.Delay(50, cancellationToken);
+                return Success(string.Empty);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _active);
+            }
         }
     }
 }
