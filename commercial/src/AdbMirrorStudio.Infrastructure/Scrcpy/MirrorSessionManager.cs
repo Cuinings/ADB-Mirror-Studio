@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using AdbMirrorStudio.Application.Adb;
+using AdbMirrorStudio.Application.Commands;
 using AdbMirrorStudio.Application.Mirroring;
 using AdbMirrorStudio.Domain.Mirroring;
 using AdbMirrorStudio.Infrastructure.Processes;
@@ -12,6 +14,8 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
 {
     private readonly ConcurrentDictionary<string, ManagedSession> _sessions = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, string> _codecCache = new(StringComparer.Ordinal);
+    private readonly ProcessCommandRunner _commandRunner = new();
     private bool _disposed;
 
     public event EventHandler<MirrorSession>? SessionChanged;
@@ -45,7 +49,11 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
                 throw new InvalidOperationException($"设备 {deviceSerial} 当前不可达。");
             }
 
-            var arguments = ScrcpyArgumentBuilder.Build(deviceSerial, profile, windowTitle);
+            var resolvedCodec = profile.VideoCodec.Equals("auto", StringComparison.OrdinalIgnoreCase)
+                ? await ResolveCodecAsync(deviceSerial, profile, cancellationToken).ConfigureAwait(false)
+                : profile.VideoCodec.ToLowerInvariant();
+            var resolvedProfile = profile with { VideoCodec = resolvedCodec };
+            var arguments = ScrcpyArgumentBuilder.Build(deviceSerial, resolvedProfile, windowTitle);
             var startInfo = new ProcessStartInfo
             {
                 FileName = scrcpyPath,
@@ -66,7 +74,13 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
                 deviceSerial,
                 MirrorSessionState.Starting,
                 null,
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                ProfileName: resolvedProfile.Name,
+                VideoCodec: resolvedCodec,
+                MaxSize: resolvedProfile.MaxSize,
+                MaxFps: resolvedProfile.MaxFps,
+                VideoBitRateMbps: resolvedProfile.VideoBitRateMbps,
+                RecordPath: resolvedProfile.RecordPath);
             var managed = new ManagedSession(process, session);
             _sessions[deviceSerial] = managed;
 
@@ -167,6 +181,65 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         }
     }
 
+    private async Task<string> ResolveCodecAsync(string serial, MirrorProfile profile, CancellationToken cancellationToken)
+    {
+        if (_codecCache.TryGetValue(serial, out var cached)) return cached;
+        try
+        {
+            var result = await _commandRunner.RunAsync(new CommandRequest(
+                scrcpyPath,
+                [$"--serial={serial}", "--list-encoders"],
+                Path.GetDirectoryName(scrcpyPath),
+                Timeout: TimeSpan.FromSeconds(20)), cancellationToken).ConfigureAwait(false);
+            var available = Regex.Matches($"{result.StandardOutput}\n{result.StandardError}", @"\b(h264|h265|av1|vp9|vp8)\b", RegexOptions.IgnoreCase)
+                .Select(match => match.Value.ToLowerInvariant())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var selected = profile.Id == MirrorProfile.Quality.Id && available.Contains("h265")
+                ? "h265"
+                : new[] { "h264", "h265", "av1", "vp9", "vp8" }.FirstOrDefault(available.Contains) ?? "h264";
+            _codecCache[serial] = selected;
+            return selected;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return "h264";
+        }
+    }
+
+    public async Task<int> ArrangeWindowsAsync(MirrorWindowLayout layout, CancellationToken cancellationToken = default)
+    {
+        var processes = _sessions.Values.Where(session => IsRunning(session.Process)).Select(session => session.Process).ToArray();
+        if (processes.Length == 0) return 0;
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (processes.Any(process => process.MainWindowHandle == 0) && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+            foreach (var process in processes) process.Refresh();
+        }
+
+        NativeMethods.SystemParametersInfo(0x0030, 0, out var workArea, 0);
+        var count = processes.Count(process => process.MainWindowHandle != 0);
+        if (count == 0) return 0;
+        var columns = layout switch
+        {
+            MirrorWindowLayout.Vertical => 1,
+            MirrorWindowLayout.Horizontal => count,
+            _ => (int)Math.Ceiling(Math.Sqrt(count))
+        };
+        var rows = (int)Math.Ceiling(count / (double)columns);
+        var width = Math.Max(320, (workArea.Right - workArea.Left) / columns);
+        var height = Math.Max(240, (workArea.Bottom - workArea.Top) / rows);
+        var index = 0;
+        foreach (var process in processes.Where(process => process.MainWindowHandle != 0))
+        {
+            var column = index % columns;
+            var row = index / columns;
+            NativeMethods.MoveWindow(process.MainWindowHandle, workArea.Left + column * width, workArea.Top + row * height, width, height, true);
+            index++;
+        }
+        return count;
+    }
+
     private static string? LastMeaningfulLine(params string[] outputs) =>
         outputs.SelectMany(output => output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
             .Select(line => line.Trim())
@@ -188,5 +261,19 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
     {
         public Process Process { get; } = process;
         public MirrorSession Session { get; set; } = session;
+    }
+
+    private static partial class NativeMethods
+    {
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        internal struct Rect { public int Left; public int Top; public int Right; public int Bottom; }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        internal static extern bool SystemParametersInfo(uint action, uint parameter, out Rect value, uint flags);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        internal static extern bool MoveWindow(nint window, int x, int y, int width, int height, bool repaint);
     }
 }

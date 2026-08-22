@@ -44,3 +44,5 @@ public sealed record DeviceDetails(
     int? BatteryLevel,
     string BatteryStatus,
     string StorageSummary);
+
+public sealed record InstalledApp(string PackageName, bool IsSystemApp = false);

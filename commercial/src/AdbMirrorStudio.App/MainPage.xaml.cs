@@ -151,6 +151,18 @@ public sealed partial class MainPage : Page
         await ViewModel.StopMirrorAsync(serial);
     }
 
+    private async void ArrangeWindows_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || sender is not FrameworkElement { Tag: string tag }) return;
+        var layout = tag switch
+        {
+            "horizontal" => AdbMirrorStudio.Domain.Mirroring.MirrorWindowLayout.Horizontal,
+            "vertical" => AdbMirrorStudio.Domain.Mirroring.MirrorWindowLayout.Vertical,
+            _ => AdbMirrorStudio.Domain.Mirroring.MirrorWindowLayout.Grid
+        };
+        await ViewModel.ArrangeMirrorWindowsAsync(layout);
+    }
+
     private static string? GetCommandSerial(object sender) => sender switch
     {
         Button { CommandParameter: string serial } => serial,
@@ -276,6 +288,38 @@ public sealed partial class MainPage : Page
             CloseButtonText = "关闭",
             DefaultButton = ContentDialogButton.Close
         }.ShowAsync();
+    }
+
+    private async void DeviceKey_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null && sender is FrameworkElement { Tag: string value } && int.TryParse(value, out var keyCode))
+        {
+            await ViewModel.SendDeviceKeyAsync(keyCode);
+        }
+    }
+
+    private async void RefreshApps_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null) await ViewModel.RefreshInstalledAppsAsync(includeSystemApps: false);
+    }
+
+    private async void AppAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || sender is not FrameworkElement { Tag: string action }) return;
+        if (action == "uninstall")
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "确认卸载应用",
+                Content = $"将卸载 {ViewModel.SelectedAppPackage} 并删除其应用数据。",
+                PrimaryButtonText = "卸载",
+                CloseButtonText = "取消",
+                DefaultButton = ContentDialogButton.Close
+            };
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        }
+        await ViewModel.RunAppActionAsync(action);
     }
 
     private async void SaveScreenshot_Click(object sender, RoutedEventArgs e)

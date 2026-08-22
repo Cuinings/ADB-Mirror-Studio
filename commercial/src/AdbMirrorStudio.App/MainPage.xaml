@@ -188,9 +188,19 @@
                 </Grid.RowDefinitions>
                 <StackPanel Spacing="4">
                     <TextBlock Text="镜像会话" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock Text="查看并停止当前由本工具启动的 scrcpy 会话" Opacity="0.68" />
+                    <TextBlock Text="查看采集参数、管理录制并排列多个 scrcpy 窗口" Opacity="0.68" />
+                    <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="宫格排列" Tag="grid" Click="ArrangeWindows_Click" />
+                        <AppBarButton Label="横向排列" Tag="horizontal" Click="ArrangeWindows_Click" />
+                        <AppBarButton Label="纵向排列" Tag="vertical" Click="ArrangeWindows_Click" />
+                    </CommandBar>
                 </StackPanel>
-                <ListView Grid.Row="1" Margin="0,22,0,0" ItemsSource="{Binding Sessions}"
+                <Grid Grid.Row="1" Margin="0,12,0,0" RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                <ListView ItemsSource="{Binding Sessions}"
                           SelectionMode="None" Background="Transparent">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
@@ -215,6 +225,8 @@
                                     <StackPanel Grid.Column="1" Spacing="3">
                                         <TextBlock Text="{Binding DeviceSerial}" FontWeight="SemiBold" FontFamily="Consolas" />
                                         <TextBlock Text="{Binding StartedAtLabel}" Opacity="0.62" />
+                                        <TextBlock Text="{Binding PerformanceLabel}" Opacity="0.72" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding RecordingLabel}" Opacity="0.62" />
                                     </StackPanel>
                                     <Border Grid.Column="2" Padding="9,4" CornerRadius="9"
                                             Background="{ThemeResource AccentFillColorTertiaryBrush}" VerticalAlignment="Center">
@@ -227,6 +239,21 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+                    <Expander Grid.Row="1" Header="录制中心" IsExpanded="True">
+                        <ListView ItemsSource="{Binding Recordings}" MaxHeight="180" SelectionMode="None" Background="Transparent">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="8" ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold"/><TextBlock Text="{Binding Path}" Opacity="0.62" TextTrimming="CharacterEllipsis"/></StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding DeviceSerial}" VerticalAlignment="Center" FontFamily="Consolas"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Expander>
+                </Grid>
                 <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
                         Background="{ThemeResource ControlFillColorSecondaryBrush}">
                     <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
@@ -412,6 +439,43 @@
                                     <ProgressRing Grid.Column="1" Width="22" Height="22" IsActive="{Binding IsBusy}"
                                                   VerticalAlignment="Center" />
                                 </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="18" CornerRadius="14"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="设备快捷控制" FontSize="17" FontWeight="SemiBold" />
+                                <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                    <AppBarButton Label="返回" Tag="4" Click="DeviceKey_Click" />
+                                    <AppBarButton Label="主页" Tag="3" Click="DeviceKey_Click" />
+                                    <AppBarButton Label="最近任务" Tag="187" Click="DeviceKey_Click" />
+                                    <AppBarButton Label="电源" Tag="26" Click="DeviceKey_Click" />
+                                    <AppBarButton Label="音量+" Tag="24" Click="DeviceKey_Click" />
+                                    <AppBarButton Label="音量-" Tag="25" Click="DeviceKey_Click" />
+                                </CommandBar>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="18" CornerRadius="14"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="应用管理器" FontSize="17" FontWeight="SemiBold" />
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <ComboBox ItemsSource="{Binding InstalledApps}" DisplayMemberPath="PackageName" SelectedValuePath="PackageName"
+                                              SelectedValue="{Binding SelectedAppPackage, Mode=TwoWay}" PlaceholderText="先读取设备应用" />
+                                    <Button Grid.Column="1" Content="读取用户应用" Click="RefreshApps_Click" />
+                                </Grid>
+                                <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                    <AppBarButton Label="启动" Tag="launch" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
+                                    <AppBarButton Label="强制停止" Tag="stop" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
+                                    <AppBarButton Label="卸载" Tag="uninstall" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
+                                </CommandBar>
+                                <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="卸载提示"
+                                         Message="卸载会删除该应用及其本机数据，执行前会再次确认。" />
                             </StackPanel>
                         </Border>
 

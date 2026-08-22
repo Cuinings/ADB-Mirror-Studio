@@ -156,6 +156,45 @@ public sealed class AdbServiceTransferTests : IDisposable
         Assert.Equal(["-s", "device", "logcat", "-d", "-t", "750"], runner.LastRequest!.Arguments);
     }
 
+    [Fact]
+    public async Task SendKeyEventAsync_UsesValidatedKeyCode()
+    {
+        var runner = new CapturingRunner(string.Empty);
+        var service = new AdbService(runner, CreateFile("adb.exe"));
+
+        await service.SendKeyEventAsync("device", 187);
+
+        Assert.Equal(["-s", "device", "shell", "input", "keyevent", "187"], runner.LastRequest!.Arguments);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.SendKeyEventAsync("device", 1000));
+    }
+
+    [Fact]
+    public async Task GetInstalledAppsAsync_ParsesAndSortsUserPackages()
+    {
+        var runner = new CapturingRunner("package:com.zeta.app\npackage:com.alpha.app\n");
+        var service = new AdbService(runner, CreateFile("adb.exe"));
+
+        var apps = await service.GetInstalledAppsAsync("device");
+
+        Assert.Equal(["com.alpha.app", "com.zeta.app"], apps.Select(app => app.PackageName));
+        Assert.Equal(["-s", "device", "shell", "pm", "list", "packages", "-3"], runner.LastRequest!.Arguments);
+    }
+
+    [Fact]
+    public async Task AppActions_PassPackageAsSingleValidatedArgument()
+    {
+        var runner = new CapturingRunner("Success");
+        var service = new AdbService(runner, CreateFile("adb.exe"));
+
+        await service.LaunchAppAsync("device", "com.example.app");
+        Assert.Contains("com.example.app", runner.LastRequest!.Arguments);
+        await service.ForceStopAppAsync("device", "com.example.app");
+        Assert.Equal(["-s", "device", "shell", "am", "force-stop", "com.example.app"], runner.LastRequest!.Arguments);
+        await service.UninstallAppAsync("device", "com.example.app");
+        Assert.Equal(["-s", "device", "uninstall", "com.example.app"], runner.LastRequest!.Arguments);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.LaunchAppAsync("device", "bad;package"));
+    }
+
     private string CreateFile(string name)
     {
         var path = Path.Combine(_directory, name);

@@ -18,6 +18,10 @@ public static class ScrcpyArgumentBuilder
         if (profile.MaxSize > 0) arguments.Add($"--max-size={profile.MaxSize}");
         if (profile.MaxFps > 0) arguments.Add($"--max-fps={profile.MaxFps}");
         if (profile.VideoBitRateMbps > 0) arguments.Add($"--video-bit-rate={profile.VideoBitRateMbps}M");
+        if (!profile.VideoCodec.Equals("auto", StringComparison.OrdinalIgnoreCase))
+        {
+            arguments.Add($"--video-codec={profile.VideoCodec.ToLowerInvariant()}");
+        }
         if (!profile.AudioEnabled) arguments.Add("--no-audio");
         if (profile.StayAwake) arguments.Add("--stay-awake");
         if (profile.TurnScreenOff) arguments.Add("--turn-screen-off");
@@ -35,6 +39,10 @@ public static class ScrcpyArgumentBuilder
         if (profile.MaxSize is < 0 or > 8192) throw new ArgumentOutOfRangeException(nameof(profile.MaxSize));
         if (profile.MaxFps is < 0 or > 240) throw new ArgumentOutOfRangeException(nameof(profile.MaxFps));
         if (profile.VideoBitRateMbps is < 0 or > 200) throw new ArgumentOutOfRangeException(nameof(profile.VideoBitRateMbps));
+        if (profile.VideoCodec.ToLowerInvariant() is not ("auto" or "h264" or "h265" or "av1" or "vp8" or "vp9"))
+        {
+            throw new ArgumentOutOfRangeException(nameof(profile.VideoCodec));
+        }
         if (!string.IsNullOrWhiteSpace(profile.RecordPath))
         {
             var extension = Path.GetExtension(profile.RecordPath);

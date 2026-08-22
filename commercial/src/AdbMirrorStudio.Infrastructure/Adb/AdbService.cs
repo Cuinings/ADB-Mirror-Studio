@@ -209,6 +209,51 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
         return FirstOutput(result);
     }
 
+    public async Task SendKeyEventAsync(string serial, int keyCode, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        if (keyCode is < 0 or > 999) throw new ArgumentOutOfRangeException(nameof(keyCode));
+        _ = await ExecuteAsync(["-s", serial.Trim(), "shell", "input", "keyevent", keyCode.ToString()], TimeSpan.FromSeconds(10), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<InstalledApp>> GetInstalledAppsAsync(
+        string serial,
+        bool includeSystemApps = false,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        var arguments = new List<string> { "-s", serial.Trim(), "shell", "pm", "list", "packages" };
+        if (!includeSystemApps) arguments.Add("-3");
+        var result = await ExecuteAsync(arguments, TimeSpan.FromSeconds(30), cancellationToken);
+        return result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => line.StartsWith("package:", StringComparison.Ordinal))
+            .Select(line => new InstalledApp(line[8..], includeSystemApps))
+            .OrderBy(app => app.PackageName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public async Task LaunchAppAsync(string serial, string packageName, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        ValidatePackageName(packageName);
+        _ = await ExecuteAsync(["-s", serial.Trim(), "shell", "monkey", "-p", packageName.Trim(), "-c", "android.intent.category.LAUNCHER", "1"], TimeSpan.FromSeconds(20), cancellationToken);
+    }
+
+    public async Task ForceStopAppAsync(string serial, string packageName, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        ValidatePackageName(packageName);
+        _ = await ExecuteAsync(["-s", serial.Trim(), "shell", "am", "force-stop", packageName.Trim()], TimeSpan.FromSeconds(15), cancellationToken);
+    }
+
+    public async Task UninstallAppAsync(string serial, string packageName, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        ValidatePackageName(packageName);
+        _ = await ExecuteAsync(["-s", serial.Trim(), "uninstall", packageName.Trim()], TimeSpan.FromMinutes(2), cancellationToken);
+    }
+
     private async Task<CommandResult> ExecuteAsync(
         IReadOnlyList<string> arguments,
         TimeSpan timeout,
@@ -237,6 +282,15 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
         if (string.IsNullOrWhiteSpace(serial))
         {
             throw new ArgumentException("请选择目标设备。", nameof(serial));
+        }
+    }
+
+    private static void ValidatePackageName(string packageName)
+    {
+        if (string.IsNullOrWhiteSpace(packageName)
+            || packageName.Any(character => !(char.IsLetterOrDigit(character) || character is '.' or '_')))
+        {
+            throw new ArgumentException("应用包名格式无效。", nameof(packageName));
         }
     }
 

@@ -42,6 +42,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _localDownloadDirectory = string.Empty;
     private string? _selectedTransferDeviceSerial;
     private string? _selectedToolsDeviceSerial;
+    private string? _selectedAppPackage;
     private AppSettings _settings = AppSettings.Default;
 
     public MainViewModel(AppServices services)
@@ -62,6 +63,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MirrorSessionCardViewModel> Sessions { get; } = [];
     public ObservableCollection<DiagnosticItemViewModel> Diagnostics { get; } = [];
     public ObservableCollection<TransferItemViewModel> TransferQueue { get; } = [];
+    public ObservableCollection<InstalledAppViewModel> InstalledApps { get; } = [];
+    public ObservableCollection<RecordingItemViewModel> Recordings { get; } = [];
     public IReadOnlyList<MirrorProfile> MirrorProfiles { get; } = MirrorProfile.Presets;
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -165,6 +168,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _selectedToolsDeviceSerial;
         set => SetField(ref _selectedToolsDeviceSerial, value);
+    }
+    public string? SelectedAppPackage
+    {
+        get => _selectedAppPackage;
+        set => SetField(ref _selectedAppPackage, value);
     }
 
     public async Task InitializeAsync()
@@ -765,6 +773,93 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task SendDeviceKeyAsync(int keyCode)
+    {
+        if (string.IsNullOrWhiteSpace(SelectedToolsDeviceSerial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        try
+        {
+            await _adb.SendKeyEventAsync(SelectedToolsDeviceSerial, keyCode);
+            StatusText = "设备控制指令已发送";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"设备控制失败：{exception.Message}";
+        }
+    }
+
+    public async Task RefreshInstalledAppsAsync(bool includeSystemApps)
+    {
+        if (string.IsNullOrWhiteSpace(SelectedToolsDeviceSerial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        EnterBusy();
+        try
+        {
+            var apps = await _adb.GetInstalledAppsAsync(SelectedToolsDeviceSerial, includeSystemApps);
+            InstalledApps.Clear();
+            foreach (var app in apps) InstalledApps.Add(new InstalledAppViewModel(app));
+            SelectedAppPackage = InstalledApps.FirstOrDefault()?.PackageName;
+            StatusText = $"已读取 {apps.Count} 个应用";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"读取应用失败：{exception.Message}";
+        }
+        finally
+        {
+            ExitBusy();
+        }
+    }
+
+    public async Task RunAppActionAsync(string action)
+    {
+        if (string.IsNullOrWhiteSpace(SelectedToolsDeviceSerial) || string.IsNullOrWhiteSpace(SelectedAppPackage))
+        {
+            StatusText = "请选择设备和应用";
+            return;
+        }
+        EnterBusy();
+        try
+        {
+            switch (action)
+            {
+                case "launch": await _adb.LaunchAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
+                case "stop": await _adb.ForceStopAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
+                case "uninstall": await _adb.UninstallAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
+                default: throw new ArgumentOutOfRangeException(nameof(action));
+            }
+            StatusText = $"应用操作已完成：{SelectedAppPackage}";
+            if (action == "uninstall") await RefreshInstalledAppsAsync(includeSystemApps: false);
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"应用操作失败：{exception.Message}";
+        }
+        finally
+        {
+            ExitBusy();
+        }
+    }
+
+    public async Task ArrangeMirrorWindowsAsync(MirrorWindowLayout layout)
+    {
+        try
+        {
+            var count = await _mirrorSessions.ArrangeWindowsAsync(layout);
+            StatusText = count == 0 ? "没有可排列的镜像窗口" : $"已排列 {count} 个镜像窗口";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"窗口排列失败：{exception.Message}";
+        }
+    }
+
     private async Task SaveSettingsSafelyAsync()
     {
         try
@@ -816,6 +911,19 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             if (session.State is MirrorSessionState.Starting or MirrorSessionState.Running or MirrorSessionState.Stopping)
             {
                 Sessions.Add(new MirrorSessionCardViewModel(session));
+            }
+            if (!string.IsNullOrWhiteSpace(session.RecordPath))
+            {
+                var recording = Recordings.FirstOrDefault(item => item.SessionId == session.Id);
+                if (recording is null)
+                {
+                    recording = new RecordingItemViewModel(session);
+                    Recordings.Insert(0, recording);
+                }
+                else
+                {
+                    recording.Update(session);
+                }
             }
         }, null);
     }
@@ -876,6 +984,8 @@ public sealed record MirrorSessionCardViewModel(MirrorSession Session)
         _ => Session.State.ToString()
     };
     public string StartedAtLabel => Session.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    public string PerformanceLabel => $"{Session.ProfileName} · {Session.VideoCodec.ToUpperInvariant()} · {Session.MaxSize}px · {Session.MaxFps} FPS · {Session.VideoBitRateMbps} Mbps";
+    public string RecordingLabel => string.IsNullOrWhiteSpace(Session.RecordPath) ? "未录制" : $"录制：{System.IO.Path.GetFileName(Session.RecordPath)}";
 }
 
 public sealed record DiagnosticItemViewModel(DiagnosticItem Item)
@@ -896,6 +1006,41 @@ public sealed record DiagnosticItemViewModel(DiagnosticItem Item)
         DiagnosticSeverity.Error => "\uEA39",
         _ => "\uE946"
     };
+}
+
+public sealed record InstalledAppViewModel(InstalledApp App)
+{
+    public string PackageName => App.PackageName;
+}
+
+public sealed class RecordingItemViewModel : INotifyPropertyChanged
+{
+    private string _status;
+    public RecordingItemViewModel(MirrorSession session)
+    {
+        SessionId = session.Id;
+        DeviceSerial = session.DeviceSerial;
+        Path = session.RecordPath ?? string.Empty;
+        StartedAt = session.StartedAt;
+        _status = StateLabel(session.State);
+    }
+    public string SessionId { get; }
+    public string DeviceSerial { get; }
+    public string Path { get; }
+    public DateTimeOffset StartedAt { get; }
+    public string FileName => System.IO.Path.GetFileName(Path);
+    public string StartedAtLabel => StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    public string Status { get => _status; private set { if (_status == value) return; _status = value; PropertyChanged?.Invoke(this, new(nameof(Status))); } }
+    public void Update(MirrorSession session) => Status = StateLabel(session.State);
+    private static string StateLabel(MirrorSessionState state) => state switch
+    {
+        MirrorSessionState.Running => "录制中",
+        MirrorSessionState.Stopping => "正在结束",
+        MirrorSessionState.Exited => "已完成",
+        MirrorSessionState.Failed => "失败",
+        _ => "准备中"
+    };
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public sealed class TransferItemViewModel : INotifyPropertyChanged

@@ -18,6 +18,11 @@ public interface IAdbService
     Task<string> CaptureScreenshotAsync(string serial, string localPath, CancellationToken cancellationToken = default);
     Task<string> GetLogcatSnapshotAsync(string serial, int maxLines = 500, CancellationToken cancellationToken = default);
     Task<string> PullFileAsync(string serial, string remotePath, string localDirectory, CancellationToken cancellationToken = default);
+    Task SendKeyEventAsync(string serial, int keyCode, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<IReadOnlyList<InstalledApp>> GetInstalledAppsAsync(string serial, bool includeSystemApps = false, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task LaunchAppAsync(string serial, string packageName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task ForceStopAppAsync(string serial, string packageName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task UninstallAppAsync(string serial, string packageName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }
 
 public sealed class AdbCommandException(string message, int? exitCode = null) : Exception(message)

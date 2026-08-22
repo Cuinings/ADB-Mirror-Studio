@@ -57,4 +57,21 @@ public sealed class ScrcpyArgumentBuilderTests
 
         Assert.Contains($"--record={Path.GetFullPath("recording.MP4")}", arguments);
     }
+
+    [Fact]
+    public void Build_AddsResolvedVideoCodec()
+    {
+        var profile = MirrorProfile.Quality with { VideoCodec = "h265" };
+
+        var arguments = ScrcpyArgumentBuilder.Build("device", profile);
+
+        Assert.Contains("--video-codec=h265", arguments);
+    }
+
+    [Fact]
+    public void Build_RejectsUnknownVideoCodec()
+    {
+        var profile = MirrorProfile.Balanced with { VideoCodec = "unknown" };
+        Assert.Throws<ArgumentOutOfRangeException>(() => ScrcpyArgumentBuilder.Build("device", profile));
+    }
 }

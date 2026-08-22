@@ -12,7 +12,8 @@ public sealed record MirrorProfile(
     bool Fullscreen,
     bool AlwaysOnTop,
     bool ReadOnly,
-    string? RecordPath = null)
+    string? RecordPath = null,
+    string VideoCodec = "auto")
 {
     public static MirrorProfile Performance { get; } = new(
         "performance", "流畅", 1280, 60, 4, false, true, false, false, false, false);
@@ -44,4 +45,17 @@ public sealed record MirrorSession(
     int? ProcessId,
     DateTimeOffset StartedAt,
     int? ExitCode = null,
-    string? Error = null);
+    string? Error = null,
+    string ProfileName = "—",
+    string VideoCodec = "h264",
+    int MaxSize = 0,
+    int MaxFps = 0,
+    int VideoBitRateMbps = 0,
+    string? RecordPath = null);
+
+public enum MirrorWindowLayout
+{
+    Grid,
+    Horizontal,
+    Vertical
+}
