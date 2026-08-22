@@ -110,7 +110,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool AutoRefresh => _settings.AutoRefresh;
     public bool AutoReconnect => _settings.AutoReconnect;
     public bool FirstRunCompleted => _settings.FirstRunCompleted;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    public string AppVersion => $"V{typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0"}";
     public string DataDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AdbMirrorStudio");
 

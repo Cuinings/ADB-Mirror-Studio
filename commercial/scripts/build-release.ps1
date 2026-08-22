@@ -12,7 +12,8 @@ $project = Join-Path $commercialRoot 'src\AdbMirrorStudio.App\AdbMirrorStudio.Ap
 $tests = Join-Path $commercialRoot 'tests\AdbMirrorStudio.UnitTests\AdbMirrorStudio.UnitTests.csproj'
 $artifactRoot = Join-Path $commercialRoot 'artifacts\release'
 $publishDirectory = Join-Path $artifactRoot 'win-x64'
-$archivePath = Join-Path $artifactRoot 'AdbMirrorStudio-preview-win-x64.zip'
+$productVersion = 'V1.0.0'
+$archivePath = Join-Path $artifactRoot "AdbMirrorStudio-$productVersion-win-x64.zip"
 
 if (-not $artifactRoot.StartsWith($commercialRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw '拒绝清理商业项目目录以外的发布路径。'
@@ -44,6 +45,7 @@ Compress-Archive -Path (Join-Path $publishDirectory '*') -DestinationPath $archi
 
 $hash = Get-FileHash -LiteralPath $archivePath -Algorithm SHA256
 [pscustomobject]@{
+    Version = $productVersion
     Archive = $archivePath
     Sha256 = $hash.Hash
     SizeBytes = (Get-Item -LiteralPath $archivePath).Length

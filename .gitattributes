@@ -1,0 +1,17 @@
+# Keep repository text deterministic across Windows and CI environments.
+* text=auto eol=lf
+
+# Native Windows command scripts conventionally require CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.vbs text eol=crlf
+
+# Never perform line-ending conversion on binary and packaged artifacts.
+*.dll binary -eol
+*.exe binary -eol
+*.ico binary -eol
+*.png binary -eol
+*.zip binary -eol
+*.pdb binary -eol
+*.pri binary -eol
+*.winmd binary -eol

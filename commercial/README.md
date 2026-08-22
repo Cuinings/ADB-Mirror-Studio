@@ -2,7 +2,7 @@
 
 ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。
 
-> 当前状态：功能候选版。核心功能可以运行和内部验收，但在完成正式品牌、代码签名、商业授权、在线更新服务及最终法律审核前，不应作为正式商业产品公开销售。
+> 当前版本：`V1.0.0` 功能候选版。核心功能可以运行和内部验收，但在完成正式品牌、代码签名、商业授权、在线更新服务及最终法律审核前，不应作为正式商业产品公开销售。
 
 ## 系统要求
 
@@ -64,7 +64,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 
 ## 解压后运行
 
-1. 完整解压 `AdbMirrorStudio-preview-win-x64.zip`，不要直接在压缩包中运行。
+1. 完整解压 `AdbMirrorStudio-V1.0.0-win-x64.zip`，不要直接在压缩包中运行。
 2. 进入解压后的目录。
 3. 双击 `AdbMirrorStudio.App.exe`。
 4. 阅读首次运行说明并选择“同意并开始”。
@@ -264,7 +264,7 @@ commercial/
 2. 运行 Release 单元测试，失败时终止发布。
 3. 生成 Windows x64 自包含发布目录。
 4. 复制 README、隐私说明、EULA 和第三方归属文件。
-5. 创建 `AdbMirrorStudio-preview-win-x64.zip`。
+5. 创建 `AdbMirrorStudio-V1.0.0-win-x64.zip`。
 6. 输出 ZIP 的 SHA256 和字节大小。
 
 发布产物：
@@ -279,7 +279,7 @@ commercial\artifacts\release\
     PRIVACY.md
     EULA.md
     THIRD-PARTY-NOTICES.md
-  AdbMirrorStudio-preview-win-x64.zip
+  AdbMirrorStudio-V1.0.0-win-x64.zip
 ```
 
 ## 第三方组件
@@ -309,4 +309,4 @@ commercial\artifacts\release\
 - [ ] 从干净系统完成安装、升级、降级和卸载验证
 - [ ] 发布 SHA256、版本说明、隐私政策和支持渠道
 
-未完成以上项目时，构建产物应继续标记为 Preview，不应宣称为正式商用发行版。
+未完成以上项目时，`V1.0.0` 构建产物属于功能候选版，不应宣称为已完成签名和法律审核的正式商用发行版。
