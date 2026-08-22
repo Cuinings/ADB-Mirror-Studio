@@ -14,6 +14,10 @@ public interface IAdbService
     Task<string> InstallApkAsync(string serial, string apkPath, CancellationToken cancellationToken = default);
     Task<string> PushFileAsync(string serial, string localPath, string remoteDirectory = "/sdcard/Download/", CancellationToken cancellationToken = default);
     Task<bool> IsOnlineAsync(string serial, CancellationToken cancellationToken = default);
+    Task<DeviceDetails> GetDeviceDetailsAsync(string serial, CancellationToken cancellationToken = default);
+    Task<string> CaptureScreenshotAsync(string serial, string localPath, CancellationToken cancellationToken = default);
+    Task<string> GetLogcatSnapshotAsync(string serial, int maxLines = 500, CancellationToken cancellationToken = default);
+    Task<string> PullFileAsync(string serial, string remotePath, string localDirectory, CancellationToken cancellationToken = default);
 }
 
 public sealed class AdbCommandException(string message, int? exitCode = null) : Exception(message)

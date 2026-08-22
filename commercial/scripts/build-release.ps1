@@ -16,7 +16,7 @@ $productVersion = 'V1.0.0'
 $archivePath = Join-Path $artifactRoot "AdbMirrorStudio-$productVersion-win-x64.zip"
 
 if (-not $artifactRoot.StartsWith($commercialRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw '拒绝清理商业项目目录以外的发布路径。'
+    throw '拒绝清理项目目录以外的发布路径。'
 }
 
 if (Test-Path -LiteralPath $artifactRoot) {
@@ -39,7 +39,7 @@ if ($LASTEXITCODE -ne 0) { throw '发布构建失败。' }
 
 Copy-Item -LiteralPath (Join-Path $commercialRoot 'THIRD-PARTY-NOTICES.md') -Destination $publishDirectory
 Copy-Item -LiteralPath (Join-Path $commercialRoot 'PRIVACY.md') -Destination $publishDirectory
-Copy-Item -LiteralPath (Join-Path $commercialRoot 'EULA.md') -Destination $publishDirectory
+Copy-Item -LiteralPath (Join-Path $commercialRoot 'FREE-USE-LICENSE.md') -Destination $publishDirectory
 Copy-Item -LiteralPath (Join-Path $commercialRoot 'README.md') -Destination $publishDirectory
 Compress-Archive -Path (Join-Path $publishDirectory '*') -DestinationPath $archivePath -CompressionLevel Optimal
 

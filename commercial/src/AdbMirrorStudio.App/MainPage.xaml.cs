@@ -133,6 +133,7 @@ public sealed partial class MainPage : Page
         SessionsView.Visibility = Visibility.Collapsed;
         DiagnosticsView.Visibility = Visibility.Collapsed;
         FilesView.Visibility = Visibility.Collapsed;
+        ToolsView.Visibility = Visibility.Collapsed;
         AboutView.Visibility = Visibility.Collapsed;
         SettingsView.Visibility = Visibility.Collapsed;
 
@@ -164,6 +165,13 @@ public sealed partial class MainPage : Page
                 if (TransferDeviceSelector.SelectedIndex < 0 && TransferDeviceSelector.Items.Count > 0)
                 {
                     TransferDeviceSelector.SelectedIndex = 0;
+                }
+                break;
+            case "tools":
+                ToolsView.Visibility = Visibility.Visible;
+                if (ToolsDeviceSelector.SelectedIndex < 0 && ToolsDeviceSelector.Items.Count > 0)
+                {
+                    ToolsDeviceSelector.SelectedIndex = 0;
                 }
                 break;
             case "about":
@@ -212,6 +220,84 @@ public sealed partial class MainPage : Page
     }
 
     private void CancelTransfer_Click(object sender, RoutedEventArgs e) => ViewModel?.CancelTransfer();
+
+    private async void DeviceDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null) return;
+        var details = await ViewModel.GetDeviceDetailsAsync(ToolsDeviceSelector.SelectedValue as string);
+        if (details is null) return;
+
+        var battery = details.BatteryLevel is null
+            ? details.BatteryStatus
+            : $"{details.BatteryLevel}%（{details.BatteryStatus}）";
+        var content = new TextBlock
+        {
+            Text = $"序列号：{details.Serial}\nAndroid：{details.AndroidVersion}（API {details.ApiLevel}）\n" +
+                   $"分辨率：{details.Resolution}\n电池：{battery}\n存储：{details.StorageSummary}",
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas")
+        };
+        await new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "设备详情",
+            Content = content,
+            CloseButtonText = "关闭",
+            DefaultButton = ContentDialogButton.Close
+        }.ShowAsync();
+    }
+
+    private async void SaveScreenshot_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || Microsoft.UI.Xaml.Application.Current is not App { MainWindow: not null } app) return;
+        var picker = new FileSavePicker
+        {
+            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+            SuggestedFileName = $"android-screen-{DateTime.Now:yyyyMMdd-HHmmss}"
+        };
+        picker.FileTypeChoices.Add("PNG 图片", [".png"]);
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(app.MainWindow));
+        var file = await picker.PickSaveFileAsync();
+        if (file is not null)
+        {
+            await ViewModel.CaptureScreenshotAsync(ToolsDeviceSelector.SelectedValue as string, file.Path);
+        }
+    }
+
+    private async void ExportLogcat_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || Microsoft.UI.Xaml.Application.Current is not App { MainWindow: not null } app) return;
+        var picker = new FileSavePicker
+        {
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            SuggestedFileName = $"android-logcat-{DateTime.Now:yyyyMMdd-HHmmss}"
+        };
+        picker.FileTypeChoices.Add("文本日志", [".txt"]);
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(app.MainWindow));
+        var file = await picker.PickSaveFileAsync();
+        if (file is not null)
+        {
+            await ViewModel.ExportLogcatAsync(ToolsDeviceSelector.SelectedValue as string, file.Path);
+        }
+    }
+
+    private async void ChooseDownloadDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || Microsoft.UI.Xaml.Application.Current is not App { MainWindow: not null } app) return;
+        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.Downloads };
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(app.MainWindow));
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is not null) ViewModel.LocalDownloadDirectory = folder.Path;
+    }
+
+    private async void PullRemoteFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+        {
+            await ViewModel.PullRemoteFileAsync(ToolsDeviceSelector.SelectedValue as string);
+        }
+    }
 
     private void FileDrop_DragOver(object sender, DragEventArgs e)
     {
@@ -302,6 +388,18 @@ public sealed partial class MainPage : Page
         if (ViewModel is null) return;
         Directory.CreateDirectory(ViewModel.DataDirectory);
         Process.Start(new ProcessStartInfo(ViewModel.DataDirectory) { UseShellExecute = true });
+    }
+
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null) await ViewModel.CheckForUpdatesAsync();
+    }
+
+    private void OpenUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        var url = ViewModel?.UpdateDownloadUrl
+            ?? "https://github.com/Cuinings/ADB-Mirror-Studio/releases";
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private async void ThemeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -6,6 +6,7 @@ using AdbMirrorStudio.Application.Devices;
 using AdbMirrorStudio.Application.Diagnostics;
 using AdbMirrorStudio.Application.Mirroring;
 using AdbMirrorStudio.Application.Settings;
+using AdbMirrorStudio.Application.Updates;
 using AdbMirrorStudio.Domain.Devices;
 using AdbMirrorStudio.Domain.Mirroring;
 using AdbMirrorStudio.Domain.Settings;
@@ -19,6 +20,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly DeviceRefreshCoordinator _refreshCoordinator;
     private readonly IAppSettingsStore _settingsStore;
     private readonly IDiagnosticsService _diagnosticsService;
+    private readonly IUpdateService _updates;
     private readonly SynchronizationContext _uiContext;
     private CancellationTokenSource? _refreshCancellation;
     private CancellationTokenSource? _transferCancellation;
@@ -30,6 +32,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _transferFilePath = string.Empty;
     private string _selectedMirrorProfileId = MirrorProfile.Balanced.Id;
     private string _recordingPath = string.Empty;
+    private string _updateStatusText = "尚未检查更新";
+    private string? _updateDownloadUrl;
+    private bool _updateAvailable;
+    private string _remoteFilePath = "/sdcard/Download/";
+    private string _localDownloadDirectory = string.Empty;
     private AppSettings _settings = AppSettings.Default;
 
     public MainViewModel(AppServices services)
@@ -38,6 +45,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _mirrorSessions = services.MirrorSessions;
         _settingsStore = services.Settings;
         _diagnosticsService = services.Diagnostics;
+        _updates = services.Updates;
         _refreshCoordinator = new DeviceRefreshCoordinator(_adb);
         _uiContext = SynchronizationContext.Current
             ?? throw new InvalidOperationException("MainViewModel 必须在 UI 线程创建。");
@@ -113,6 +121,31 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string AppVersion => $"V{typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0"}";
     public string DataDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AdbMirrorStudio");
+    public string UpdateStatusText
+    {
+        get => _updateStatusText;
+        private set => SetField(ref _updateStatusText, value);
+    }
+    public string? UpdateDownloadUrl
+    {
+        get => _updateDownloadUrl;
+        private set => SetField(ref _updateDownloadUrl, value);
+    }
+    public bool UpdateAvailable
+    {
+        get => _updateAvailable;
+        private set => SetField(ref _updateAvailable, value);
+    }
+    public string RemoteFilePath
+    {
+        get => _remoteFilePath;
+        set => SetField(ref _remoteFilePath, value);
+    }
+    public string LocalDownloadDirectory
+    {
+        get => _localDownloadDirectory;
+        set => SetField(ref _localDownloadDirectory, value);
+    }
 
     public async Task InitializeAsync()
     {
@@ -517,6 +550,130 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (Exception exception)
         {
             StatusText = $"诊断失败：{exception.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task CheckForUpdatesAsync()
+    {
+        IsBusy = true;
+        UpdateStatusText = "正在检查 GitHub Release…";
+        try
+        {
+            var update = await _updates.CheckAsync();
+            UpdateAvailable = update.IsUpdateAvailable;
+            UpdateDownloadUrl = update.DownloadUrl ?? update.ReleaseUrl;
+            UpdateStatusText = update.IsUpdateAvailable
+                ? $"发现新版本 {update.LatestVersion}，当前版本 {update.CurrentVersion}"
+                : $"当前已是最新版本 {update.CurrentVersion}";
+        }
+        catch (Exception exception)
+        {
+            UpdateAvailable = false;
+            UpdateDownloadUrl = "https://github.com/Cuinings/ADB-Mirror-Studio/releases";
+            UpdateStatusText = $"检查更新失败：{exception.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task<DeviceDetails?> GetDeviceDetailsAsync(string? serial)
+    {
+        if (string.IsNullOrWhiteSpace(serial))
+        {
+            StatusText = "请选择一台目标设备";
+            return null;
+        }
+        IsBusy = true;
+        StatusText = $"正在读取 {serial} 的设备信息…";
+        try
+        {
+            var details = await _adb.GetDeviceDetailsAsync(serial);
+            StatusText = $"已读取 {serial} 的设备信息";
+            return details;
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"读取设备信息失败：{exception.Message}";
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task CaptureScreenshotAsync(string? serial, string localPath)
+    {
+        if (string.IsNullOrWhiteSpace(serial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        IsBusy = true;
+        StatusText = $"正在截取 {serial} 的屏幕…";
+        try
+        {
+            var result = await _adb.CaptureScreenshotAsync(serial, localPath);
+            StatusText = $"截图已保存到 {result}";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"截图失败：{exception.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ExportLogcatAsync(string? serial, string localPath)
+    {
+        if (string.IsNullOrWhiteSpace(serial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        IsBusy = true;
+        StatusText = $"正在导出 {serial} 的 Logcat…";
+        try
+        {
+            var content = await _adb.GetLogcatSnapshotAsync(serial, 2000);
+            await File.WriteAllTextAsync(localPath, content, System.Text.Encoding.UTF8);
+            StatusText = $"Logcat 已保存到 {localPath}";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"Logcat 导出失败：{exception.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task PullRemoteFileAsync(string? serial)
+    {
+        if (string.IsNullOrWhiteSpace(serial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        IsBusy = true;
+        StatusText = $"正在从 {serial} 下载 {RemoteFilePath}…";
+        try
+        {
+            var result = await _adb.PullFileAsync(serial, RemoteFilePath, LocalDownloadDirectory);
+            StatusText = string.IsNullOrWhiteSpace(result) ? "设备文件下载完成" : $"下载完成：{result}";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"设备文件下载失败：{exception.Message}";
         }
         finally
         {

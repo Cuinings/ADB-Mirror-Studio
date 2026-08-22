@@ -22,8 +22,11 @@
             <NavigationViewItem Content="文件与 APK" Tag="files">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItem Content="诊断中心" Tag="diagnostics">
+            <NavigationViewItem Content="设备工具" Tag="tools">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="诊断中心" Tag="diagnostics">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
             <NavigationViewItem Content="关于" Tag="about">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE946;" /></NavigationViewItem.Icon>
@@ -366,6 +369,73 @@
                 </Border>
             </Grid>
 
+            <Grid x:Name="ToolsView" Margin="24,20" MaxWidth="1000" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="设备工具" FontSize="28" FontWeight="SemiBold" />
+                    <TextBlock Text="查看设备状态、保存截图、导出日志并从设备下载文件" Opacity="0.68" />
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" Margin="0,22,0,16" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="14">
+                        <Border Padding="18" CornerRadius="14"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="目标设备" FontSize="17" FontWeight="SemiBold" />
+                                <ComboBox x:Name="ToolsDeviceSelector" ItemsSource="{Binding Devices}"
+                                          DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
+                                          PlaceholderText="选择已连接设备" HorizontalAlignment="Stretch" />
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Button Content="查看设备详情" Click="DeviceDetails_Click"
+                                            Style="{ThemeResource AccentButtonStyle}" />
+                                    <Button Content="保存屏幕截图" Click="SaveScreenshot_Click" />
+                                    <Button Content="导出 Logcat" Click="ExportLogcat_Click" />
+                                    <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="18" CornerRadius="14"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="从设备下载" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="输入设备上的绝对路径，可下载单个文件或目录" Opacity="0.62" />
+                                </StackPanel>
+                                <TextBox Header="设备路径" Text="{Binding RemoteFilePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="/sdcard/Download/example.zip" />
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Header="保存到本地目录" Text="{Binding LocalDownloadDirectory}"
+                                             IsReadOnly="True" PlaceholderText="请选择本地目录" />
+                                    <Button Grid.Column="1" Content="选择目录" Click="ChooseDownloadDirectory_Click"
+                                            VerticalAlignment="Bottom" />
+                                </Grid>
+                                <Button Content="开始下载" Click="PullRemoteFile_Click"
+                                        Style="{ThemeResource AccentButtonStyle}" HorizontalAlignment="Left" />
+                                <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                                         Title="路径说明"
+                                         Message="设备路径必须以 / 开头；下载目录为空时不会执行操作。" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
+                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+                </Border>
+            </Grid>
+
             <Grid x:Name="AboutView" Margin="24,20" MaxWidth="900" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="18">
@@ -398,6 +468,22 @@
                                            TextWrapping="Wrap" />
                                 <TextBlock Text="{Binding DataDirectory}" FontFamily="Consolas" Opacity="0.72" />
                                 <Button Content="打开数据目录" Click="OpenDataDirectory_Click" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+                        <Border Padding="18" CornerRadius="14"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="免费更新" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="仅访问公开 GitHub Release，不上传设备或用户数据。所有版本功能均免费。"
+                                           TextWrapping="Wrap" Opacity="0.68" />
+                                <TextBlock Text="{Binding UpdateStatusText}" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Button Content="检查更新" Click="CheckUpdates_Click" />
+                                    <Button Content="打开下载页面" Click="OpenUpdate_Click"
+                                            Style="{ThemeResource AccentButtonStyle}" />
+                                    <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                         <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"

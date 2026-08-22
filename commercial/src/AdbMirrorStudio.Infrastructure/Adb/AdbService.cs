@@ -99,6 +99,102 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
         return result.IsSuccess && result.StandardOutput.Trim() == "device";
     }
 
+    public async Task<DeviceDetails> GetDeviceDetailsAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        var android = FirstOutput(await ExecuteAsync(
+            ["-s", serial.Trim(), "shell", "getprop", "ro.build.version.release"],
+            TimeSpan.FromSeconds(10), cancellationToken));
+        var api = FirstOutput(await ExecuteAsync(
+            ["-s", serial.Trim(), "shell", "getprop", "ro.build.version.sdk"],
+            TimeSpan.FromSeconds(10), cancellationToken));
+        var sizeOutput = FirstOutput(await ExecuteAsync(
+            ["-s", serial.Trim(), "shell", "wm", "size"],
+            TimeSpan.FromSeconds(10), cancellationToken));
+        var batteryOutput = FirstOutput(await ExecuteAsync(
+            ["-s", serial.Trim(), "shell", "dumpsys", "battery"],
+            TimeSpan.FromSeconds(10), cancellationToken));
+        var storageOutput = FirstOutput(await ExecuteAsync(
+            ["-s", serial.Trim(), "shell", "df", "-h", "/data"],
+            TimeSpan.FromSeconds(15), cancellationToken));
+
+        return new DeviceDetails(
+            serial.Trim(),
+            EmptyFallback(android),
+            EmptyFallback(api),
+            ParseResolution(sizeOutput),
+            ParseIntField(batteryOutput, "level"),
+            ParseBatteryStatus(ParseIntField(batteryOutput, "status")),
+            ParseStorage(storageOutput));
+    }
+
+    public async Task<string> CaptureScreenshotAsync(
+        string serial,
+        string localPath,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        if (string.IsNullOrWhiteSpace(localPath)) throw new ArgumentException("请选择截图保存位置。", nameof(localPath));
+        if (!string.Equals(Path.GetExtension(localPath), ".png", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("截图必须保存为 PNG 文件。", nameof(localPath));
+        }
+
+        var fullPath = Path.GetFullPath(localPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        var remotePath = $"/data/local/tmp/adb-mirror-{Guid.NewGuid():N}.png";
+        await ExecuteAsync(["-s", serial.Trim(), "shell", "screencap", "-p", remotePath], TimeSpan.FromSeconds(30), cancellationToken);
+        try
+        {
+            await ExecuteAsync(["-s", serial.Trim(), "pull", remotePath, fullPath], TimeSpan.FromMinutes(2), cancellationToken);
+            return fullPath;
+        }
+        finally
+        {
+            try
+            {
+                await ExecuteAsync(["-s", serial.Trim(), "shell", "rm", "-f", remotePath], TimeSpan.FromSeconds(10), CancellationToken.None);
+            }
+            catch
+            {
+                // A temporary screenshot must not hide the primary result.
+            }
+        }
+    }
+
+    public async Task<string> GetLogcatSnapshotAsync(
+        string serial,
+        int maxLines = 500,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        if (maxLines is < 1 or > 10000) throw new ArgumentOutOfRangeException(nameof(maxLines));
+        var result = await ExecuteAsync(
+            ["-s", serial.Trim(), "logcat", "-d", "-t", maxLines.ToString()],
+            TimeSpan.FromSeconds(30), cancellationToken);
+        return result.StandardOutput;
+    }
+
+    public async Task<string> PullFileAsync(
+        string serial,
+        string remotePath,
+        string localDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        if (string.IsNullOrWhiteSpace(remotePath) || !remotePath.Trim().StartsWith('/'))
+        {
+            throw new ArgumentException("设备路径必须是以 / 开头的绝对路径。", nameof(remotePath));
+        }
+        if (string.IsNullOrWhiteSpace(localDirectory)) throw new ArgumentException("请选择本地保存目录。", nameof(localDirectory));
+        var fullDirectory = Path.GetFullPath(localDirectory);
+        Directory.CreateDirectory(fullDirectory);
+        var result = await ExecuteAsync(
+            ["-s", serial.Trim(), "pull", remotePath.Trim(), fullDirectory],
+            TimeSpan.FromMinutes(5), cancellationToken);
+        return FirstOutput(result);
+    }
+
     private async Task<CommandResult> ExecuteAsync(
         IReadOnlyList<string> arguments,
         TimeSpan timeout,
@@ -148,4 +244,41 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
 
     private static string FirstOutput(CommandResult result) =>
         (string.IsNullOrWhiteSpace(result.StandardOutput) ? result.StandardError : result.StandardOutput).Trim();
+
+    private static string EmptyFallback(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value.Trim();
+
+    private static int? ParseIntField(string output, string name)
+    {
+        foreach (var line in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = line.Split(':', 2);
+            if (parts.Length == 2 && parts[0].Trim().Equals(name, StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(parts[1].Trim(), out var value)) return value;
+        }
+        return null;
+    }
+
+    private static string ParseResolution(string output)
+    {
+        var line = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(value => value.Contains("size:", StringComparison.OrdinalIgnoreCase));
+        return line is null ? "—" : line[(line.IndexOf(':') + 1)..].Trim();
+    }
+
+    private static string ParseBatteryStatus(int? status) => status switch
+    {
+        2 => "充电中",
+        3 => "放电中",
+        4 => "未充电",
+        5 => "已充满",
+        _ => "未知"
+    };
+
+    private static string ParseStorage(string output)
+    {
+        var line = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        if (line is null) return "—";
+        var columns = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return columns.Length >= 5 ? $"可用 {columns[3]} / 总计 {columns[1]}（已用 {columns[4]}）" : line.Trim();
+    }
 }

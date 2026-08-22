@@ -1,6 +1,6 @@
 # ADB Mirror Studio
 
-面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输与环境诊断工作台。
+面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输与环境诊断工作台。所有功能永久免费，无账户、无试用期、无订阅、无激活和功能分级。
 
 ![ADB Mirror Studio 文件与 APK 页面](commercial/artifacts/files-feature-smoke.png)
 
@@ -14,7 +14,7 @@
 SHA256：
 
 ```text
-A4EC87B780F285BC8F8CEF172DCD429DF3F7E1A079DEE20836D57C8089660A4F
+C1B49645CA83D7274B1A8D8705B1EA216E3830FDA7887ABB09768B0ECDE6D298
 ```
 
 ## 主要功能
@@ -25,11 +25,24 @@ A4EC87B780F285BC8F8CEF172DCD429DF3F7E1A079DEE20836D57C8089660A4F
 - MP4/MKV 录屏和镜像会话管理
 - APK 覆盖安装
 - 多选、拖放、逐项状态和可取消文件传输队列
+- 从设备下载文件或目录，形成双向文件传输
+- 设备详情、电池与存储状态查看
+- PNG 屏幕截图和 Logcat 日志导出
 - USB 设备切换 ADB TCP/IP
 - 设备重启与历史无线地址自动重连
 - ADB、scrcpy、mDNS 和 PATH 冲突诊断
 - WinUI 3、Desktop Acrylic、浅色/深色主题和 DPI 自适应
 - 本地设置、首次运行说明与崩溃日志
+- 通过公开 GitHub Release 免费检查更新
+
+## 免费使用策略
+
+- 所有现有及后续内置功能均免费开放
+- 不区分个人版、专业版、商业版或企业版
+- 不要求注册账户或联网激活
+- 不设置试用期限、设备数量付费墙或订阅校验
+- 个人、组织和企业均可在合法授权的设备上免费使用
+- 在线更新检查只访问公开 GitHub Release，不上传设备或用户信息
 
 ## 系统要求
 
@@ -100,11 +113,11 @@ commercial\artifacts\release\
 - [完整使用、开发和发布手册](commercial/README.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
 - [隐私说明](commercial/PRIVACY.md)
-- [最终用户许可协议模板](commercial/EULA.md)
+- [免费使用许可](commercial/FREE-USE-LICENSE.md)
 - [第三方组件归属](commercial/THIRD-PARTY-NOTICES.md)
 
 ## 发行状态
 
-V1.0.0 是功能候选版本。正式商业分发前仍需配置可信代码签名、正式发行主体、最终法律文本、完整第三方许可材料、商业授权和在线更新服务。
+V1.0.0 为首个免费公开版本。代码签名、安装程序和完整第三方许可归档仍属于发行工程改进，不会用于限制功能或建立付费版本。
 
 本项目仅应用于用户拥有或已获明确授权的 Android 设备。不得用于未经授权的访问、监控或数据复制。

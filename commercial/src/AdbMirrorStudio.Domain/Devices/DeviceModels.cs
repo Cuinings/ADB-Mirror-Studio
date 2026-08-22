@@ -36,3 +36,11 @@ public sealed record MdnsService(string Name, string ServiceType, string Endpoin
 
 public sealed record DeviceSnapshot(long Version, DateTimeOffset CapturedAt, IReadOnlyList<DeviceInfo> Devices);
 
+public sealed record DeviceDetails(
+    string Serial,
+    string AndroidVersion,
+    string ApiLevel,
+    string Resolution,
+    int? BatteryLevel,
+    string BatteryStatus,
+    string StorageSummary);

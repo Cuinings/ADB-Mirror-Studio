@@ -63,6 +63,50 @@ public sealed class AdbServiceTransferTests : IDisposable
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.EnableTcpIpAsync("usb-device", 70000));
     }
 
+    [Fact]
+    public async Task PullFileAsync_UsesRemoteAbsolutePathAndLocalDirectory()
+    {
+        var adbPath = CreateFile("adb.exe");
+        var destination = Path.Combine(_directory, "downloads");
+        var runner = new CapturingRunner("1 file pulled");
+        var service = new AdbService(runner, adbPath);
+
+        await service.PullFileAsync("device", "/sdcard/Download/report.pdf", destination);
+
+        Assert.Equal(["-s", "device", "pull", "/sdcard/Download/report.pdf", Path.GetFullPath(destination)], runner.LastRequest!.Arguments);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.PullFileAsync("device", "relative.txt", destination));
+    }
+
+    [Fact]
+    public async Task CaptureScreenshotAsync_CapturesPullsAndRemovesTemporaryFile()
+    {
+        var adbPath = CreateFile("adb.exe");
+        var runner = new CapturingRunner("ok");
+        var service = new AdbService(runner, adbPath);
+        var destination = Path.Combine(_directory, "screen shot.png");
+
+        var result = await service.CaptureScreenshotAsync("device", destination);
+
+        Assert.Equal(Path.GetFullPath(destination), result);
+        Assert.Equal(3, runner.Requests.Count);
+        Assert.Equal("screencap", runner.Requests[0].Arguments[3]);
+        Assert.Equal("pull", runner.Requests[1].Arguments[2]);
+        Assert.Equal("rm", runner.Requests[2].Arguments[3]);
+    }
+
+    [Fact]
+    public async Task GetLogcatSnapshotAsync_UsesBoundedLineCount()
+    {
+        var adbPath = CreateFile("adb.exe");
+        var runner = new CapturingRunner("log line");
+        var service = new AdbService(runner, adbPath);
+
+        var output = await service.GetLogcatSnapshotAsync("device", 750);
+
+        Assert.Equal("log line", output);
+        Assert.Equal(["-s", "device", "logcat", "-d", "-t", "750"], runner.LastRequest!.Arguments);
+    }
+
     private string CreateFile(string name)
     {
         var path = Path.Combine(_directory, name);
@@ -75,10 +119,12 @@ public sealed class AdbServiceTransferTests : IDisposable
     private sealed class CapturingRunner(string output) : ICommandRunner
     {
         public CommandRequest? LastRequest { get; private set; }
+        public List<CommandRequest> Requests { get; } = [];
 
         public Task<CommandResult> RunAsync(CommandRequest request, CancellationToken cancellationToken = default)
         {
             LastRequest = request;
+            Requests.Add(request);
             return Task.FromResult(new CommandResult(0, output, string.Empty, TimeSpan.Zero, false, false));
         }
     }

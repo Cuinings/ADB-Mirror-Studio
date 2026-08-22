@@ -1,8 +1,8 @@
 # ADB Mirror Studio
 
-ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。
+ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。所有功能永久免费，无账户、无试用、无订阅、无激活和功能分级。
 
-> 当前版本：`V1.0.0` 功能候选版。核心功能可以运行和内部验收，但在完成正式品牌、代码签名、商业授权、在线更新服务及最终法律审核前，不应作为正式商业产品公开销售。
+> 当前版本：`V1.0.0` 免费公开版。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
 
 ## 系统要求
 
@@ -49,8 +49,17 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 - 将文件推送到设备 `/sdcard/Download/`
 - 任务取消、失败隔离和完成统计
 - 中文、空格及特殊字符路径作为独立进程参数安全传递
+- 从设备绝对路径下载单个文件或目录到本地
 
 同名文件推送时由 ADB 覆盖目标文件。安装来源不明的 APK 前，应先验证发布者和文件哈希。
+
+### 设备工具
+
+- 查看 Android 版本、API 级别、屏幕分辨率、电池及数据分区存储状态
+- 将当前设备画面保存为 PNG 文件
+- 导出最近 2000 行 Logcat 到 UTF-8 文本文件
+- 通过设备绝对路径下载文件或目录
+- 所有操作只对用户主动选择且已授权的设备执行
 
 ### 诊断、设置与隐私
 
@@ -61,6 +70,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 - 未处理异常写入本机崩溃日志
 - 默认不包含遥测、广告 SDK 或自动日志上传
 - 首次运行展示设备权限和数据使用说明
+- 通过公开 GitHub Release 检查免费更新，不上传设备信息
 
 ## 解压后运行
 
@@ -69,7 +79,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 3. 双击 `AdbMirrorStudio.App.exe`。
 4. 阅读首次运行说明并选择“同意并开始”。
 
-若 Windows SmartScreen 显示“未知发布者”，请先核对发布渠道提供的 SHA256。技术预览包尚未配置正式代码签名；正式商业包不应要求用户绕过签名警告。
+若 Windows SmartScreen 显示“未知发布者”，请先核对发布渠道提供的 SHA256。当前便携包尚未配置正式代码签名；后续签名不会成为任何功能的付费条件。
 
 ## 连接设备
 
@@ -122,6 +132,16 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 
 取消会终止当前 ADB 子进程，已经完成的文件不会自动删除。
 
+## 设备工具
+
+1. 打开“设备工具”并选择在线设备。
+2. 点击“查看设备详情”读取系统版本、分辨率、电池和存储信息。
+3. 点击“保存屏幕截图”并选择 `.png` 保存位置。
+4. 点击“导出 Logcat”可保存最近 2000 行设备日志。
+5. 从设备下载时输入以 `/` 开头的绝对路径，例如 `/sdcard/Download/example.zip`，选择本地目录后开始下载。
+
+设备日志可能包含应用名称、系统事件或其他敏感信息；分享前请自行审阅和脱敏。
+
 ## 数据与日志
 
 应用数据默认保存在：
@@ -138,7 +158,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 相关文档：
 
 - [隐私说明](PRIVACY.md)
-- [最终用户许可协议模板](EULA.md)
+- [免费使用许可](FREE-USE-LICENSE.md)
 - [第三方组件归属](THIRD-PARTY-NOTICES.md)
 
 ## 常见问题
@@ -263,7 +283,7 @@ commercial/
 1. 清理 `commercial/artifacts/release`。
 2. 运行 Release 单元测试，失败时终止发布。
 3. 生成 Windows x64 自包含发布目录。
-4. 复制 README、隐私说明、EULA 和第三方归属文件。
+4. 复制 README、隐私说明、免费使用许可和第三方归属文件。
 5. 创建 `AdbMirrorStudio-V1.0.0-win-x64.zip`。
 6. 输出 ZIP 的 SHA256 和字节大小。
 
@@ -277,7 +297,7 @@ commercial\artifacts\release\
     Licenses\
     README.md
     PRIVACY.md
-    EULA.md
+    FREE-USE-LICENSE.md
     THIRD-PARTY-NOTICES.md
   AdbMirrorStudio-V1.0.0-win-x64.zip
 ```
@@ -292,15 +312,15 @@ commercial\artifacts\release\
 
 正式发行必须保留第三方版权声明、适用许可文本和源码获取方式。不得删除或隐藏开源组件归属。
 
-## 正式商用发布检查表
+## 发行质量检查表
 
 - [ ] 确认正式产品名、公司法定名称、联系信息和品牌资产
 - [ ] 将 MSIX Publisher 与代码签名证书主体保持一致
 - [ ] 使用可信代码签名证书签署 EXE、MSIX 或安装程序
-- [ ] 确定永久、订阅或试用授权模式并配置验证公钥或服务
-- [ ] 配置 HTTPS 更新清单和已签名安装包下载地址
+- [x] 确认所有功能永久免费且不加入付费授权、试用或订阅限制
+- [x] 通过 HTTPS 读取公开 GitHub Release 并提供发行包下载入口
 - [ ] 完成中文、英文资源及语言切换验收
-- [ ] 补充适用地区、退款、支持、责任限制和最终 EULA
+- [ ] 补充适用地区、支持渠道、责任限制和最终免费使用许可文本
 - [ ] 补齐 SDL、FFmpeg、libusb 的许可原文和源码获取义务
 - [ ] 运行 Windows App Certification Kit
 - [ ] 在 Windows 10/11、100%–250% DPI、多显示器环境测试
@@ -309,4 +329,4 @@ commercial\artifacts\release\
 - [ ] 从干净系统完成安装、升级、降级和卸载验证
 - [ ] 发布 SHA256、版本说明、隐私政策和支持渠道
 
-未完成以上项目时，`V1.0.0` 构建产物属于功能候选版，不应宣称为已完成签名和法律审核的正式商用发行版。
+未完成以上质量项目不会限制软件功能；发布页面应如实说明代码签名和法律材料状态。

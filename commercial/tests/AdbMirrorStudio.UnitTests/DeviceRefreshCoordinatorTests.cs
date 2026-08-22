@@ -44,5 +44,9 @@ public sealed class DeviceRefreshCoordinatorTests
         public Task<string> InstallApkAsync(string serial, string apkPath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<string> PushFileAsync(string serial, string localPath, string remoteDirectory = "/sdcard/Download/", CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> IsOnlineAsync(string serial, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<DeviceDetails> GetDeviceDetailsAsync(string serial, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> CaptureScreenshotAsync(string serial, string localPath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> GetLogcatSnapshotAsync(string serial, int maxLines = 500, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> PullFileAsync(string serial, string remotePath, string localDirectory, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }
