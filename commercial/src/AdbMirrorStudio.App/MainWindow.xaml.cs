@@ -1,3 +1,4 @@
+using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -13,8 +14,46 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.Title = "ADB Mirror Studio";
+        UpdateTitleBarColors();
         SizeAndCenterWindow();
         RootFrame.Navigate(typeof(MainPage), services);
+    }
+
+    internal void ApplyTheme(string theme)
+    {
+        RootLayout.RequestedTheme = theme switch
+        {
+            "Light" => ElementTheme.Light,
+            "Dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default
+        };
+        UpdateTitleBarColors();
+    }
+
+    private void RootLayout_ActualThemeChanged(FrameworkElement sender, object args) => UpdateTitleBarColors();
+
+    private void UpdateTitleBarColors()
+    {
+        var isDark = RootLayout.ActualTheme == ElementTheme.Dark;
+        var foreground = isDark ? Colors.White : Colors.Black;
+        var inactive = isDark
+            ? ColorHelper.FromArgb(150, 255, 255, 255)
+            : ColorHelper.FromArgb(150, 0, 0, 0);
+        var hover = isDark
+            ? ColorHelper.FromArgb(28, 255, 255, 255)
+            : ColorHelper.FromArgb(18, 0, 0, 0);
+        var pressed = isDark
+            ? ColorHelper.FromArgb(45, 255, 255, 255)
+            : ColorHelper.FromArgb(32, 0, 0, 0);
+
+        AppWindow.TitleBar.ButtonForegroundColor = foreground;
+        AppWindow.TitleBar.ButtonInactiveForegroundColor = inactive;
+        AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        AppWindow.TitleBar.ButtonHoverBackgroundColor = hover;
+        AppWindow.TitleBar.ButtonHoverForegroundColor = foreground;
+        AppWindow.TitleBar.ButtonPressedBackgroundColor = pressed;
+        AppWindow.TitleBar.ButtonPressedForegroundColor = foreground;
     }
 
     private void SizeAndCenterWindow()

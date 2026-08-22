@@ -15,6 +15,8 @@
 - USB 设备切换 ADB TCP/IP、设备重启与历史地址自动重连
 - ADB、scrcpy、mDNS 和 PATH 冲突诊断
 - Acrylic 界面、主题、自动刷新和本地设置持久化
+- 修复浅色模式下窗口、Acrylic 后景与标题栏配色不同步的问题
+- 设置和更新 JSON 使用编译期元数据，兼容裁剪后的 Release 构建
 - 首次运行说明、隐私说明、免费使用许可和第三方归属文档
 - 通过公开 GitHub Release 免费检查更新
 
@@ -29,7 +31,7 @@
 ## 校验值
 
 ```text
-SHA256 C1B49645CA83D7274B1A8D8705B1EA216E3830FDA7887ABB09768B0ECDE6D298
+SHA256 57F95FBA485A9435BC7328F36B4FF35E1625706F6C719D864B28BA580CCFFB17
 ```
 
 ## 验证

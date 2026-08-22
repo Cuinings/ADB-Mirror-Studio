@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using AdbMirrorStudio.Application.Updates;
+using AdbMirrorStudio.Infrastructure.Serialization;
 
 namespace AdbMirrorStudio.Infrastructure.Updates;
 
@@ -20,7 +21,9 @@ public sealed class GitHubUpdateService(
 
         using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
-        var release = await response.Content.ReadFromJsonAsync<GitHubRelease>(cancellationToken: cancellationToken)
+        var release = await response.Content.ReadFromJsonAsync(
+                AdbMirrorStudioJsonContext.Default.GitHubRelease,
+                cancellationToken)
             .ConfigureAwait(false) ?? throw new InvalidOperationException("GitHub 返回了空的版本信息。");
 
         var current = ParseVersion(currentVersion);
@@ -48,13 +51,14 @@ public sealed class GitHubUpdateService(
     private static string NormalizeDisplayVersion(string value) =>
         $"V{ParseVersion(value).ToString(3)}";
 
-    private sealed record GitHubRelease(
-        [property: JsonPropertyName("tag_name")] string TagName,
-        [property: JsonPropertyName("html_url")] string HtmlUrl,
-        [property: JsonPropertyName("body")] string? Body,
-        [property: JsonPropertyName("assets")] IReadOnlyList<GitHubAsset> Assets);
-
-    private sealed record GitHubAsset(
-        [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl);
 }
+
+internal sealed record GitHubRelease(
+    [property: JsonPropertyName("tag_name")] string TagName,
+    [property: JsonPropertyName("html_url")] string HtmlUrl,
+    [property: JsonPropertyName("body")] string? Body,
+    [property: JsonPropertyName("assets")] IReadOnlyList<GitHubAsset> Assets);
+
+internal sealed record GitHubAsset(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl);

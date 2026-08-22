@@ -417,12 +417,19 @@ public sealed partial class MainPage : Page
 
     private void ApplyTheme(string theme, bool updateSelector)
     {
-        RequestedTheme = theme switch
+        if (Microsoft.UI.Xaml.Application.Current is App { MainWindow: not null } app)
         {
-            "Light" => ElementTheme.Light,
-            "Dark" => ElementTheme.Dark,
-            _ => ElementTheme.Default
-        };
+            app.MainWindow.ApplyTheme(theme);
+        }
+        else
+        {
+            RequestedTheme = theme switch
+            {
+                "Light" => ElementTheme.Light,
+                "Dark" => ElementTheme.Dark,
+                _ => ElementTheme.Default
+            };
+        }
 
         if (updateSelector)
         {

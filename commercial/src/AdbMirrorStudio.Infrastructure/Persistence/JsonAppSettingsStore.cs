@@ -1,16 +1,12 @@
 using System.Text.Json;
 using AdbMirrorStudio.Application.Settings;
 using AdbMirrorStudio.Domain.Settings;
+using AdbMirrorStudio.Infrastructure.Serialization;
 
 namespace AdbMirrorStudio.Infrastructure.Persistence;
 
 public sealed class JsonAppSettingsStore(string filePath) : IAppSettingsStore
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
-
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
@@ -20,7 +16,10 @@ public sealed class JsonAppSettingsStore(string filePath) : IAppSettingsStore
         {
             if (!File.Exists(filePath)) return AppSettings.Default;
             await using var stream = File.OpenRead(filePath);
-            return await JsonSerializer.DeserializeAsync<AppSettings>(stream, SerializerOptions, cancellationToken)
+            return await JsonSerializer.DeserializeAsync(
+                    stream,
+                    AdbMirrorStudioJsonContext.Default.AppSettings,
+                    cancellationToken)
                 .ConfigureAwait(false) ?? AppSettings.Default;
         }
         catch (JsonException)
@@ -49,7 +48,11 @@ public sealed class JsonAppSettingsStore(string filePath) : IAppSettingsStore
                 4096,
                 FileOptions.WriteThrough | FileOptions.Asynchronous))
             {
-                await JsonSerializer.SerializeAsync(stream, settings, SerializerOptions, cancellationToken)
+                await JsonSerializer.SerializeAsync(
+                        stream,
+                        settings,
+                        AdbMirrorStudioJsonContext.Default.AppSettings,
+                        cancellationToken)
                     .ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -63,4 +66,3 @@ public sealed class JsonAppSettingsStore(string filePath) : IAppSettingsStore
         }
     }
 }
-
