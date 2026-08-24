@@ -12,6 +12,8 @@
 
 当前版本：`V1.1.0`
 
+开发版本：`V1.2.0`（新增应用内安全下载并启动安装更新，尚未发布）
+
 - [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.1.0)
 - [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe)
 - [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/AdbMirrorStudio-V1.1.0-win-x64.zip)
@@ -39,7 +41,7 @@ SHA256：
 - ADB、scrcpy、mDNS 和 PATH 冲突诊断
 - WinUI 3、Desktop Acrylic、浅色/深色主题和 DPI 自适应
 - 本地设置、首次运行说明与崩溃日志
-- 通过公开 GitHub Release 免费检查更新
+- 通过公开 GitHub Release 免费检查更新，并在校验大小和 SHA256 后直接启动安装程序
 
 ## 稳定性修复
 
@@ -150,6 +152,7 @@ commercial\artifacts\installer\
 
 - [完整使用、开发和发布手册](commercial/README.md)
 - [版本管理与问题修复计划](commercial/VERSIONING.md)
+- [V1.2.0 开发说明](commercial/RELEASE-NOTES-V1.2.0.md)
 - [V1.1.0 发行说明](commercial/RELEASE-NOTES-V1.1.0.md)
 - [V1.0.1 修复说明](commercial/RELEASE-NOTES-V1.0.1.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)

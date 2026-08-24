@@ -42,7 +42,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             IAdbService adb = new AdbService(runner, adbPath);
             _mirrorSessions = new MirrorSessionManager(adb, scrcpyPath);
             IDiagnosticsService diagnostics = new DiagnosticsService(runner, adbPath, scrcpyPath);
-            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
             IUpdateService updates = new GitHubUpdateService(
                 _httpClient,
                 AppVersionInfo.ProductVersion,

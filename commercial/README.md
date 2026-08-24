@@ -2,7 +2,7 @@
 
 ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。所有功能永久免费，无账户、无试用、无订阅、无激活和功能分级。
 
-> 当前版本：`V1.1.0` 免费公开版。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
+> 当前开发版本：`V1.2.0`；当前公开版本为 `V1.1.0`。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
 
 ## 系统要求
 
@@ -82,7 +82,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 - 未处理异常写入本机崩溃日志
 - 默认不包含遥测、广告 SDK 或自动日志上传
 - 首次运行展示设备权限和数据使用说明
-- 通过公开 GitHub Release 检查免费更新，不上传设备信息
+- 通过公开 GitHub Release 检查免费更新；可在应用内下载 Windows x64 安装包，校验 GitHub 资产大小与 SHA256 后启动安装
 
 ## 安装或便携运行
 
@@ -315,7 +315,7 @@ commercial/
 
 ```text
 commercial\artifacts\release\
-  AdbMirrorStudio-V1.1.0-win-x64.zip
+  AdbMirrorStudio-V1.2.0-win-x64.zip
 ```
 
 生成安装版：
@@ -330,7 +330,7 @@ commercial\artifacts\release\
 
 ```text
 commercial\artifacts\installer\
-  ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe
+  ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe
 ```
 
 ## 第三方组件
@@ -360,7 +360,7 @@ commercial\artifacts\installer\
 - [ ] 将 MSIX Publisher 与代码签名证书主体保持一致
 - [ ] 使用可信代码签名证书签署 EXE、MSIX 或安装程序
 - [x] 确认所有功能永久免费且不加入付费授权、试用或订阅限制
-- [x] 通过 HTTPS 读取公开 GitHub Release 并提供发行包下载入口
+- [x] 通过 HTTPS 读取公开 GitHub Release，安全下载、校验并启动 Windows x64 安装包
 - [ ] 完成中文、英文资源及语言切换验收
 - [ ] 补充适用地区、支持渠道、责任限制和最终免费使用许可文本
 - [ ] 补齐 SDL、FFmpeg、libusb 的许可原文和源码获取义务

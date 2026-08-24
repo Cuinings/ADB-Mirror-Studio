@@ -480,6 +480,51 @@ public sealed partial class MainPage : Page
         if (ViewModel is not null) await ViewModel.CheckForUpdatesAsync();
     }
 
+    private async void DownloadAndInstallUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || !ViewModel.CanDownloadAndInstallUpdate) return;
+        var result = await new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = $"安装 {ViewModel.LatestUpdateVersion}",
+            Content = "应用将从官方 GitHub Release 下载 Windows x64 安装包，核对文件大小和 SHA256 后启动安装程序，并关闭当前应用。安装程序尚未配置代码签名，Windows 可能显示“未知发布者”。",
+            PrimaryButtonText = "下载并安装",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary
+        }.ShowAsync();
+        if (result != ContentDialogResult.Primary) return;
+
+        var installerPath = await ViewModel.DownloadAndVerifyUpdateAsync();
+        if (string.IsNullOrWhiteSpace(installerPath) || _shutdown) return;
+        try
+        {
+            using var installer = Process.Start(new ProcessStartInfo(installerPath)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(installerPath)
+            });
+            if (installer is null) throw new InvalidOperationException("Windows 未能启动安装程序。");
+            if (Microsoft.UI.Xaml.Application.Current is App { MainWindow: not null } app)
+            {
+                app.MainWindow.Close();
+            }
+        }
+        catch (Exception exception)
+        {
+            CrashLog.Write(exception);
+            await new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "无法启动安装程序",
+                Content = exception.Message,
+                CloseButtonText = "关闭"
+            }.ShowAsync();
+        }
+    }
+
+    private void CancelUpdateDownload_Click(object sender, RoutedEventArgs e) =>
+        ViewModel?.CancelUpdateDownload();
+
     private void OpenUpdate_Click(object sender, RoutedEventArgs e)
     {
         var url = ViewModel?.UpdateDownloadUrl

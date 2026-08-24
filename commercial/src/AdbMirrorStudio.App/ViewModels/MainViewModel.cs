@@ -25,6 +25,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly SynchronizationContext _uiContext;
     private CancellationTokenSource? _refreshCancellation;
     private CancellationTokenSource? _transferCancellation;
+    private CancellationTokenSource? _updateDownloadCancellation;
     private int _busyCount;
     private int _transferRunning;
     private bool _disposed;
@@ -39,6 +40,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _updateStatusText = "尚未检查更新";
     private string? _updateDownloadUrl;
     private bool _updateAvailable;
+    private bool _isUpdateDownloading;
+    private double _updateDownloadProgress;
+    private AppUpdateInfo? _availableUpdate;
     private string _remoteFilePath = "/sdcard/Download/";
     private string _localDownloadDirectory = string.Empty;
     private string? _selectedTransferDeviceSerial;
@@ -75,7 +79,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         get => _isBusy;
         private set
         {
-            if (SetField(ref _isBusy, value)) OnPropertyChanged(nameof(IsIdle));
+            if (SetField(ref _isBusy, value))
+            {
+                OnPropertyChanged(nameof(IsIdle));
+                OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
+            }
         }
     }
     public bool IsIdle => !IsBusy;
@@ -149,7 +157,32 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool UpdateAvailable
     {
         get => _updateAvailable;
-        private set => SetField(ref _updateAvailable, value);
+        private set
+        {
+            if (SetField(ref _updateAvailable, value))
+            {
+                OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
+            }
+        }
+    }
+    public bool CanDownloadAndInstallUpdate =>
+        UpdateAvailable && _availableUpdate?.Installer is not null && !IsBusy && !IsUpdateDownloading;
+    public string LatestUpdateVersion => _availableUpdate?.LatestVersion ?? string.Empty;
+    public bool IsUpdateDownloading
+    {
+        get => _isUpdateDownloading;
+        private set
+        {
+            if (SetField(ref _isUpdateDownloading, value))
+            {
+                OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
+            }
+        }
+    }
+    public double UpdateDownloadProgress
+    {
+        get => _updateDownloadProgress;
+        private set => SetField(ref _updateDownloadProgress, value);
     }
     public string RemoteFilePath
     {
@@ -708,16 +741,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             var update = await _updates.CheckAsync();
+            _availableUpdate = update;
             UpdateAvailable = update.IsUpdateAvailable;
-            UpdateDownloadUrl = update.DownloadUrl ?? update.ReleaseUrl;
+            UpdateDownloadUrl = update.ReleaseUrl;
+            OnPropertyChanged(nameof(LatestUpdateVersion));
+            OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
             UpdateStatusText = update.IsUpdateAvailable
-                ? $"发现新版本 {update.LatestVersion}，当前版本 {update.CurrentVersion}"
+                ? update.Installer is not null
+                    ? $"发现新版本 {update.LatestVersion}，可直接下载并安装"
+                    : $"发现新版本 {update.LatestVersion}，但没有可验证的安装包，请打开发布页面"
                 : $"当前已是最新版本 {update.CurrentVersion}";
         }
         catch (Exception exception)
         {
+            _availableUpdate = null;
             UpdateAvailable = false;
             UpdateDownloadUrl = "https://github.com/Cuinings/ADB-Mirror-Studio/releases";
+            OnPropertyChanged(nameof(LatestUpdateVersion));
+            OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
             UpdateStatusText = $"检查更新失败：{exception.Message}";
         }
         finally
@@ -725,6 +766,55 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             ExitBusy();
         }
     }
+
+    public async Task<string?> DownloadAndVerifyUpdateAsync()
+    {
+        var update = _availableUpdate;
+        if (update?.Installer is null || !update.IsUpdateAvailable || IsBusy) return null;
+
+        var cancellation = new CancellationTokenSource();
+        _updateDownloadCancellation = cancellation;
+        IsUpdateDownloading = true;
+        UpdateDownloadProgress = 0;
+        EnterBusy();
+        UpdateStatusText = $"正在下载 {update.LatestVersion} 安装包…";
+        try
+        {
+            var progress = new Progress<UpdateDownloadProgress>(item =>
+            {
+                if (_disposed || !IsUpdateDownloading) return;
+                UpdateDownloadProgress = item.Percentage;
+                UpdateStatusText = $"正在下载 {update.LatestVersion}：{item.Percentage:F0}%";
+            });
+            var directory = Path.Combine(DataDirectory, "Updates", update.LatestVersion);
+            var path = await _updates.DownloadInstallerAsync(update, directory, progress, cancellation.Token);
+            UpdateDownloadProgress = 100;
+            UpdateStatusText = $"{update.LatestVersion} 下载完成，大小和 SHA256 校验通过";
+            return path;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            UpdateStatusText = "更新下载已取消";
+            return null;
+        }
+        catch (Exception exception)
+        {
+            UpdateStatusText = $"更新下载失败：{exception.Message}";
+            return null;
+        }
+        finally
+        {
+            if (ReferenceEquals(_updateDownloadCancellation, cancellation))
+            {
+                _updateDownloadCancellation = null;
+            }
+            cancellation.Dispose();
+            IsUpdateDownloading = false;
+            ExitBusy();
+        }
+    }
+
+    public void CancelUpdateDownload() => _updateDownloadCancellation?.Cancel();
 
     public async Task<DeviceDetails?> GetDeviceDetailsAsync(string? serial)
     {
@@ -1000,6 +1090,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         refreshCancellation?.Cancel();
         refreshCancellation?.Dispose();
         _transferCancellation?.Cancel();
+        _updateDownloadCancellation?.Cancel();
     }
 
     private void OnSessionChanged(object? sender, MirrorSession session)

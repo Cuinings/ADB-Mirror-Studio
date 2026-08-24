@@ -1,4 +1,6 @@
+using System.Buffers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using AdbMirrorStudio.Application.Updates;
 using AdbMirrorStudio.Infrastructure.Serialization;
@@ -11,6 +13,8 @@ public sealed class GitHubUpdateService(
     string owner,
     string repository) : IUpdateService
 {
+    private const long MaximumInstallerSize = 1024L * 1024 * 1024;
+
     public async Task<AppUpdateInfo> CheckAsync(CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(
@@ -19,25 +23,212 @@ public sealed class GitHubUpdateService(
         request.Headers.UserAgent.ParseAdd("ADB-Mirror-Studio-UpdateChecker/1.0");
         request.Headers.Accept.ParseAdd("application/vnd.github+json");
 
-        using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var release = await response.Content.ReadFromJsonAsync(
-                AdbMirrorStudioJsonContext.Default.GitHubRelease,
-                cancellationToken)
-            .ConfigureAwait(false) ?? throw new InvalidOperationException("GitHub 返回了空的版本信息。");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(15));
+        GitHubRelease release;
+        try
+        {
+            using var response = await httpClient.SendAsync(request, timeout.Token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            release = await response.Content.ReadFromJsonAsync(
+                    AdbMirrorStudioJsonContext.Default.GitHubRelease,
+                    timeout.Token)
+                .ConfigureAwait(false) ?? throw new InvalidOperationException("GitHub 返回了空的版本信息。");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException("连接 GitHub 检查更新超时。");
+        }
 
         var current = ParseVersion(currentVersion);
         var latest = ParseVersion(release.TagName);
-        var asset = release.Assets.FirstOrDefault(item =>
-            item.Name.EndsWith("win-x64.zip", StringComparison.OrdinalIgnoreCase));
+        var expectedInstallerName = $"ADB-Mirror-Studio-Setup-{NormalizeDisplayVersion(release.TagName)}-win-x64.exe";
+        var asset = (release.Assets ?? []).FirstOrDefault(item =>
+            string.Equals(item.Name, expectedInstallerName, StringComparison.OrdinalIgnoreCase)
+            && IsTrustedInstallerAsset(item));
+        var installer = asset is null ? null : CreateInstallerPackage(asset);
 
         return new AppUpdateInfo(
             NormalizeDisplayVersion(currentVersion),
             NormalizeDisplayVersion(release.TagName),
             latest > current,
             release.HtmlUrl,
-            asset?.BrowserDownloadUrl,
+            installer,
             release.Body);
+    }
+
+    public async Task<string> DownloadInstallerAsync(
+        AppUpdateInfo update,
+        string destinationDirectory,
+        IProgress<UpdateDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!update.IsUpdateAvailable)
+        {
+            throw new InvalidOperationException("当前没有可安装的新版本。");
+        }
+
+        var installer = update.Installer
+            ?? throw new InvalidOperationException("新版本未提供可验证的 Windows x64 安装包。");
+        ValidateInstallerPackage(installer);
+        var expectedInstallerName = $"ADB-Mirror-Studio-Setup-{NormalizeDisplayVersion(update.LatestVersion)}-win-x64.exe";
+        if (!installer.FileName.Equals(expectedInstallerName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("安装包文件名与目标版本不一致。");
+        }
+        Directory.CreateDirectory(destinationDirectory);
+
+        var destinationPath = Path.GetFullPath(Path.Combine(destinationDirectory, installer.FileName));
+        var normalizedDirectory = Path.GetFullPath(destinationDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!destinationPath.StartsWith(normalizedDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("安装包文件名不安全。");
+        }
+
+        if (File.Exists(destinationPath))
+        {
+            if (new FileInfo(destinationPath).Length == installer.Size
+                && await HasExpectedHashAsync(destinationPath, installer.Sha256, cancellationToken).ConfigureAwait(false))
+            {
+                progress?.Report(new UpdateDownloadProgress(installer.Size, installer.Size));
+                return destinationPath;
+            }
+            File.Delete(destinationPath);
+        }
+
+        var temporaryPath = destinationPath + ".download";
+        File.Delete(temporaryPath);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, installer.DownloadUrl);
+            request.Headers.UserAgent.ParseAdd("ADB-Mirror-Studio-Updater/1.0");
+            using var response = await httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            if (response.Content.Headers.ContentLength is > MaximumInstallerSize)
+            {
+                throw new InvalidDataException("安装包超过允许的最大大小。");
+            }
+
+            await using var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            await using var target = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                128 * 1024,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var buffer = ArrayPool<byte>.Shared.Rent(128 * 1024);
+            long received = 0;
+            try
+            {
+                while (true)
+                {
+                    var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                        .ConfigureAwait(false);
+                    if (read == 0) break;
+                    received += read;
+                    if (received > MaximumInstallerSize || received > installer.Size)
+                    {
+                        throw new InvalidDataException("安装包大小与 GitHub 元数据不一致。");
+                    }
+                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    progress?.Report(new UpdateDownloadProgress(received, installer.Size));
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+            await target.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await target.DisposeAsync().ConfigureAwait(false);
+
+            if (received != installer.Size)
+            {
+                throw new InvalidDataException($"安装包大小校验失败：应为 {installer.Size} 字节，实际为 {received} 字节。");
+            }
+            if (!await HasExpectedHashAsync(temporaryPath, installer.Sha256, cancellationToken).ConfigureAwait(false))
+            {
+                throw new InvalidDataException("安装包 SHA256 校验失败，文件已删除。");
+            }
+
+            File.Move(temporaryPath, destinationPath, overwrite: true);
+            progress?.Report(new UpdateDownloadProgress(installer.Size, installer.Size));
+            return destinationPath;
+        }
+        catch
+        {
+            File.Delete(temporaryPath);
+            throw;
+        }
+    }
+
+    private static bool IsTrustedInstallerAsset(GitHubAsset asset) =>
+        string.Equals(asset.State, "uploaded", StringComparison.OrdinalIgnoreCase)
+        && asset.Name?.StartsWith("ADB-Mirror-Studio-Setup-V", StringComparison.OrdinalIgnoreCase) == true
+        && asset.Name.EndsWith("-win-x64.exe", StringComparison.OrdinalIgnoreCase)
+        && asset.Size is > 0 and <= MaximumInstallerSize
+        && TryNormalizeSha256(asset.Digest, out _)
+        && IsTrustedDownloadUrl(asset.BrowserDownloadUrl);
+
+    private static AppUpdatePackage CreateInstallerPackage(GitHubAsset asset)
+    {
+        _ = TryNormalizeSha256(asset.Digest, out var sha256);
+        return new AppUpdatePackage(asset.Name, asset.BrowserDownloadUrl, asset.Size, sha256!);
+    }
+
+    private static void ValidateInstallerPackage(AppUpdatePackage installer)
+    {
+        if (Path.GetFileName(installer.FileName) != installer.FileName
+            || !installer.FileName.StartsWith("ADB-Mirror-Studio-Setup-V", StringComparison.OrdinalIgnoreCase)
+            || !installer.FileName.EndsWith("-win-x64.exe", StringComparison.OrdinalIgnoreCase)
+            || installer.Size is <= 0 or > MaximumInstallerSize
+            || !TryNormalizeSha256(installer.Sha256, out _)
+            || !IsTrustedDownloadUrl(installer.DownloadUrl))
+        {
+            throw new InvalidOperationException("安装包元数据无效或来源不受信任。");
+        }
+    }
+
+    private static bool IsTrustedDownloadUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttps
+        && (uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase));
+
+    private static bool TryNormalizeSha256(string? value, out string? sha256)
+    {
+        sha256 = value?.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) == true
+            ? value[7..]
+            : value;
+        if (sha256?.Length != 64 || sha256.Any(character => !Uri.IsHexDigit(character)))
+        {
+            sha256 = null;
+            return false;
+        }
+        sha256 = sha256.ToUpperInvariant();
+        return true;
+    }
+
+    private static async Task<bool> HasExpectedHashAsync(
+        string path,
+        string expectedSha256,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            128 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        var hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(hash).Equals(expectedSha256, StringComparison.OrdinalIgnoreCase);
     }
 
     private static Version ParseVersion(string value)
@@ -64,4 +255,7 @@ internal sealed record GitHubRelease(
 
 internal sealed record GitHubAsset(
     [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl);
+    [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl,
+    [property: JsonPropertyName("size")] long Size,
+    [property: JsonPropertyName("digest")] string? Digest,
+    [property: JsonPropertyName("state")] string State);

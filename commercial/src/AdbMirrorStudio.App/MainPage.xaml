@@ -567,13 +567,19 @@
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                             <StackPanel Spacing="10">
                                 <TextBlock Text="免费更新" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="仅访问公开 GitHub Release，不上传设备或用户数据。所有版本功能均免费。"
+                                <TextBlock Text="仅访问公开 GitHub Release，不上传设备或用户数据。安装前会校验文件大小和 SHA256。"
                                            TextWrapping="Wrap" Opacity="0.68" />
                                 <TextBlock Text="{Binding UpdateStatusText}" TextWrapping="Wrap" />
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UpdateDownloadProgress}"
+                                             Height="4" />
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <Button Content="检查更新" Click="CheckUpdates_Click" IsEnabled="{Binding IsIdle}" />
-                                    <Button Content="打开下载页面" Click="OpenUpdate_Click"
+                                    <Button Content="下载并安装" Click="DownloadAndInstallUpdate_Click"
+                                            IsEnabled="{Binding CanDownloadAndInstallUpdate}"
                                             Style="{ThemeResource AccentButtonStyle}" />
+                                    <Button Content="取消下载" Click="CancelUpdateDownload_Click"
+                                            IsEnabled="{Binding IsUpdateDownloading}" />
+                                    <Button Content="打开发布页面" Click="OpenUpdate_Click" />
                                     <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
                                 </StackPanel>
                             </StackPanel>
