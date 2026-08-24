@@ -27,7 +27,7 @@ public sealed class ScrcpyArgumentBuilderTests
     }
 
     [Fact]
-    public void Build_RecordingProfile_AddsRecordingAndPresentationOptions()
+    public void Build_RecordingProfile_UsesSafeWindowedPresentationOptions()
     {
         var path = Path.Combine(Path.GetTempPath(), "镜像 录制.mkv");
         var profile = MirrorProfile.Presentation with { RecordPath = path };
@@ -35,10 +35,33 @@ public sealed class ScrcpyArgumentBuilderTests
         var arguments = ScrcpyArgumentBuilder.Build("device", profile);
 
         Assert.Contains($"--record={Path.GetFullPath(path)}", arguments);
-        Assert.Contains("--fullscreen", arguments);
-        Assert.Contains("--always-on-top", arguments);
-        Assert.Contains("--turn-screen-off", arguments);
+        Assert.DoesNotContain("--fullscreen", arguments);
+        Assert.DoesNotContain("--always-on-top", arguments);
+        Assert.Contains("--stay-awake", arguments);
+        Assert.DoesNotContain("--turn-screen-off", arguments);
+        Assert.DoesNotContain("--no-control", arguments);
+    }
+
+    [Fact]
+    public void Presets_NeverForceFullscreenOrAlwaysOnTop()
+    {
+        foreach (var profile in MirrorProfile.Presets)
+        {
+            Assert.False(profile.Fullscreen);
+            Assert.False(profile.AlwaysOnTop);
+        }
+    }
+
+    [Fact]
+    public void Build_ReadOnlyProfile_DropsOptionsThatRequireControl()
+    {
+        var profile = MirrorProfile.Balanced with { ReadOnly = true, TurnScreenOff = true };
+
+        var arguments = ScrcpyArgumentBuilder.Build("device", profile);
+
         Assert.Contains("--no-control", arguments);
+        Assert.DoesNotContain("--stay-awake", arguments);
+        Assert.DoesNotContain("--turn-screen-off", arguments);
     }
 
     [Fact]

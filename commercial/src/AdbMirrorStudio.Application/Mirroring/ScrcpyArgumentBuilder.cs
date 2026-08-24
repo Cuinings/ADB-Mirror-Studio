@@ -23,8 +23,8 @@ public static class ScrcpyArgumentBuilder
             arguments.Add($"--video-codec={profile.VideoCodec.ToLowerInvariant()}");
         }
         if (!profile.AudioEnabled) arguments.Add("--no-audio");
-        if (profile.StayAwake) arguments.Add("--stay-awake");
-        if (profile.TurnScreenOff) arguments.Add("--turn-screen-off");
+        if (profile.StayAwake && !profile.ReadOnly) arguments.Add("--stay-awake");
+        if (profile.TurnScreenOff && !profile.ReadOnly) arguments.Add("--turn-screen-off");
         if (profile.Fullscreen) arguments.Add("--fullscreen");
         if (profile.AlwaysOnTop) arguments.Add("--always-on-top");
         if (profile.ReadOnly) arguments.Add("--no-control");

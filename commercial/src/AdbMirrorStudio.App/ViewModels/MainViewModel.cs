@@ -603,7 +603,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var card = Devices.FirstOrDefault(device => device.Serial == serial);
             var profile = MirrorProfile.Presets.FirstOrDefault(item => item.Id == SelectedMirrorProfileId)
                 ?? MirrorProfile.Balanced;
-            if (IsRecordingEnabled) profile = profile with { RecordPath = RecordingPath };
+            if (IsRecordingEnabled)
+            {
+                profile = profile with
+                {
+                    RecordPath = RecordingPath,
+                    Fullscreen = false,
+                    AlwaysOnTop = false
+                };
+            }
             var session = await _mirrorSessions.StartAsync(serial, profile, card?.DisplayName);
             StatusText = !string.IsNullOrWhiteSpace(session.RecordPath)
                 ? $"已启动 {serial} 的镜像并录制到 {session.RecordPath}"
@@ -947,6 +955,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     recording.Update(session);
                 }
             }
+            if (session.State == MirrorSessionState.Failed)
+            {
+                StatusText = string.IsNullOrWhiteSpace(session.Error)
+                    ? $"{session.DeviceSerial} 的镜像或录屏异常退出"
+                    : $"镜像或录屏失败：{session.Error}";
+            }
         }, null);
     }
 
@@ -1059,6 +1073,10 @@ public sealed class RecordingItemViewModel : INotifyPropertyChanged
     public void Update(MirrorSession session)
     {
         Status = StateLabel(session.State);
+        if (session.State == MirrorSessionState.Failed && !string.IsNullOrWhiteSpace(session.Error))
+        {
+            Status = $"失败：{session.Error}";
+        }
         if (session.State == MirrorSessionState.Exited)
         {
             try

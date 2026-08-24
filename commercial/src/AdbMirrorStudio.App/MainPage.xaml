@@ -249,7 +249,7 @@
                                     <Grid Padding="8" ColumnSpacing="12">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold"/><TextBlock Text="{Binding Path}" Opacity="0.62" TextTrimming="CharacterEllipsis"/></StackPanel>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="{Binding Status}"/><TextBlock Text="{Binding SizeLabel}" Opacity="0.62"/></StackPanel>
+                                        <StackPanel Grid.Column="1" MaxWidth="360" VerticalAlignment="Center"><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/><TextBlock Text="{Binding SizeLabel}" Opacity="0.62"/></StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding DeviceSerial}" VerticalAlignment="Center" FontFamily="Consolas"/>
                                         <Button Grid.Column="3" Content="打开目录" CommandParameter="{Binding Path}" Click="OpenRecordingDirectory_Click"/>
                                     </Grid>

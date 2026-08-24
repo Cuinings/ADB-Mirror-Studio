@@ -81,6 +81,16 @@
     <Content Include="..\..\..\LICENSE.txt" Link="Licenses\Apache-2.0.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <Target Name="CopyScrcpyIconToBuildOutput" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\Square44x44Logo.scale-200.png"
+          DestinationFiles="$(OutDir)Tools\scrcpy.png" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyScrcpyIconToPublishOutput" AfterTargets="Publish">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Assets\Square44x44Logo.scale-200.png"
+          DestinationFiles="$(PublishDir)Tools\scrcpy.png" SkipUnchangedFiles="true" />
+  </Target>
+
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if

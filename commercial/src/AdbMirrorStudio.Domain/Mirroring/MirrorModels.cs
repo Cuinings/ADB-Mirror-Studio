@@ -22,7 +22,7 @@ public sealed record MirrorProfile(
     public static MirrorProfile Quality { get; } = new(
         "quality", "高清", 2560, 60, 16, true, true, false, false, false, false);
     public static MirrorProfile Presentation { get; } = new(
-        "presentation", "演示", 1920, 30, 8, true, true, true, true, true, true);
+        "presentation", "演示", 1920, 30, 8, true, true, false, false, false, false);
 
     public static IReadOnlyList<MirrorProfile> Presets { get; } =
         [Performance, Balanced, Quality, Presentation];

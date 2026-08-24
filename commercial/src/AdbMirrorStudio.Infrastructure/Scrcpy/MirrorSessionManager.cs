@@ -15,6 +15,7 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
     private readonly ConcurrentDictionary<string, ManagedSession> _sessions = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, string> _codecCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, string> _recordingOwners = new(StringComparer.OrdinalIgnoreCase);
     private readonly ProcessCommandRunner _commandRunner = new();
     private bool _disposed;
 
@@ -57,10 +58,11 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
                 throw new InvalidOperationException($"设备 {deviceSerial} 当前不可达。");
             }
 
+            var recordPath = PrepareRecordPath(profile.RecordPath);
             var resolvedCodec = profile.VideoCodec.Equals("auto", StringComparison.OrdinalIgnoreCase)
                 ? await ResolveCodecAsync(deviceSerial, profile, cancellationToken).ConfigureAwait(false)
                 : profile.VideoCodec.ToLowerInvariant();
-            var resolvedProfile = profile with { VideoCodec = resolvedCodec };
+            var resolvedProfile = profile with { VideoCodec = resolvedCodec, RecordPath = recordPath };
             var arguments = ScrcpyArgumentBuilder.Build(deviceSerial, resolvedProfile, windowTitle);
             var startInfo = new ProcessStartInfo
             {
@@ -90,24 +92,39 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
                 VideoBitRateMbps: resolvedProfile.VideoBitRateMbps,
                 RecordPath: resolvedProfile.RecordPath);
             var managed = new ManagedSession(process, session);
+            if (recordPath is not null && !_recordingOwners.TryAdd(recordPath, deviceSerial))
+            {
+                process.Dispose();
+                throw new InvalidOperationException("该录屏文件正被另一个镜像会话使用，请选择不同的文件名。");
+            }
             _sessions[deviceSerial] = managed;
 
             try
             {
                 if (!process.Start()) throw new InvalidOperationException("scrcpy 进程未能启动。");
-                managed.Session = session with { State = MirrorSessionState.Running, ProcessId = process.Id };
-                RaiseChanged(managed.Session);
-                _ = ObserveExitAsync(deviceSerial, managed);
-                return managed.Session;
             }
             catch (Exception exception)
             {
                 _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(deviceSerial, managed));
+                if (recordPath is not null) _recordingOwners.TryRemove(new KeyValuePair<string, string>(recordPath, deviceSerial));
                 managed.Session = session with { State = MirrorSessionState.Failed, Error = exception.Message };
                 RaiseChanged(managed.Session);
                 process.Dispose();
                 throw;
             }
+
+            managed.Session = session with { State = MirrorSessionState.Running, ProcessId = process.Id };
+            RaiseChanged(managed.Session);
+            var observer = ObserveExitAsync(deviceSerial, managed);
+            if (await Task.WhenAny(observer, Task.Delay(TimeSpan.FromMilliseconds(750))).ConfigureAwait(false) == observer)
+            {
+                await observer.ConfigureAwait(false);
+                var detail = string.IsNullOrWhiteSpace(managed.Session.Error)
+                    ? "scrcpy 启动后立即退出，请检查设备编码器和录屏路径。"
+                    : managed.Session.Error;
+                throw new InvalidOperationException(detail);
+            }
+            return managed.Session;
         }
         finally
         {
@@ -185,6 +202,10 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
             try
             {
                 _sessions.TryRemove(new KeyValuePair<string, ManagedSession>(serial, managed));
+                if (!string.IsNullOrWhiteSpace(managed.Session.RecordPath))
+                {
+                    _recordingOwners.TryRemove(new KeyValuePair<string, string>(managed.Session.RecordPath, serial));
+                }
                 managed.Process.Dispose();
             }
             finally
@@ -204,6 +225,35 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         {
             return false;
         }
+    }
+
+    internal static string? PrepareRecordPath(string? recordPath)
+    {
+        if (string.IsNullOrWhiteSpace(recordPath)) return null;
+        var fullPath = Path.GetFullPath(recordPath.Trim());
+        var extension = Path.GetExtension(fullPath);
+        if (!extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("录屏文件必须使用 .mp4 或 .mkv 扩展名。", nameof(recordPath));
+        }
+
+        var directory = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+        {
+            throw new DirectoryNotFoundException("录屏保存目录不存在，请重新选择保存位置。");
+        }
+        if (Directory.Exists(fullPath)) throw new IOException("录屏文件路径指向了文件夹，请重新选择文件名。");
+
+        try
+        {
+            using var stream = new FileStream(fullPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException($"录屏文件无法写入：{exception.Message}", exception);
+        }
+        return fullPath;
     }
 
     private async Task<string> ResolveCodecAsync(string serial, MirrorProfile profile, CancellationToken cancellationToken)
@@ -265,10 +315,15 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         return count;
     }
 
-    private static string? LastMeaningfulLine(params string[] outputs) =>
-        outputs.SelectMany(output => output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+    private static string? LastMeaningfulLine(params string[] outputs)
+    {
+        var lines = outputs.SelectMany(output => output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
             .Select(line => line.Trim())
-            .LastOrDefault(line => line.Length > 0);
+            .Where(line => line.Length > 0)
+            .ToArray();
+        return lines.LastOrDefault(line => line.Contains("ERROR", StringComparison.OrdinalIgnoreCase))
+            ?? lines.LastOrDefault();
+    }
 
     private void RaiseChanged(MirrorSession session) => SessionChanged?.Invoke(this, session);
 
