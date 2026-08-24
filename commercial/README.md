@@ -12,7 +12,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 - USB 连接需要可用的数据线和正确的设备驱动
 - 无线连接要求电脑与手机网络互通
 
-便携发布包为自包含版本，无需另外安装 Python、.NET、ADB 或 scrcpy。
+安装版和便携版均为自包含版本，无需另外安装 Python、.NET、ADB 或 scrcpy。
 
 正常退出会停止本程序启动的镜像会话，并清理发布包 `Tools` 目录中的 ADB/scrcpy 进程，因此可以直接移动、覆盖或删除完整解压目录。系统中来自其他目录的 ADB 不会被终止。
 
@@ -48,7 +48,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 | 流畅 | 1280 | 60 FPS | 4 Mbps | 网络或设备性能有限 |
 | 均衡 | 1920 | 60 FPS | 8 Mbps | 日常操作，默认选项 |
 | 高清 | 2560 | 60 FPS | 16 Mbps | 演示、截图和高画质需求 |
-| 演示 | 1920 | 30 FPS | 8 Mbps | 全屏、置顶、关闭设备屏幕、只读展示 |
+| 演示 | 1920 | 30 FPS | 8 Mbps | 稳定帧率的会议演示与录屏 |
 
 ### 文件与 APK
 
@@ -84,7 +84,17 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 - 首次运行展示设备权限和数据使用说明
 - 通过公开 GitHub Release 检查免费更新，不上传设备信息
 
-## 解压后运行
+## 安装或便携运行
+
+推荐安装方式：
+
+1. 下载 `ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe`。
+2. 双击安装程序，阅读隐私说明和免费使用许可。
+3. 选择安装目录；默认安装到当前用户的 `%LocalAppData%\Programs\ADB Mirror Studio`，无需管理员权限。
+4. 从开始菜单启动。安装程序支持覆盖升级，升级不会删除 `%LocalAppData%\AdbMirrorStudio` 中的设置。
+5. 可从 Windows“已安装的应用”或开始菜单卸载；交互式卸载时可选择是否一并删除本机设置和崩溃日志。
+
+便携方式：
 
 1. 完整解压 `AdbMirrorStudio-V1.0.0-win-x64.zip`，不要直接在压缩包中运行。
 2. 进入解压后的目录。
@@ -247,8 +257,11 @@ commercial/
     AdbMirrorStudio.Infrastructure/
     AdbMirrorStudio.App/
   tests/AdbMirrorStudio.UnitTests/
+  installer/AdbMirrorStudio.nsi
   scripts/build-release.ps1
+  scripts/build-installer.ps1
   artifacts/release/
+  artifacts/installer/
 ```
 
 ## 开发环境
@@ -257,6 +270,7 @@ commercial/
 - 支持 .NET 10 和 WinUI 3 的 Visual Studio
 - Windows 10/11 SDK
 - PowerShell 7 或 Windows PowerShell 5.1
+- 构建安装程序时需要 NSIS 3（可通过 `NSIS_COMPILER` 指定 `makensis.exe`）
 
 仓库根目录已有项目专用 SDK 时，可运行：
 
@@ -290,28 +304,33 @@ commercial/
 .\scripts\build-release.ps1
 ```
 
-发布脚本会：
+便携发布脚本会：
 
-1. 清理 `commercial/artifacts/release`。
-2. 运行 Release 单元测试，失败时终止发布。
-3. 生成 Windows x64 自包含发布目录。
-4. 复制 README、隐私说明、免费使用许可和第三方归属文件。
-5. 创建 `AdbMirrorStudio-V1.0.0-win-x64.zip`。
-6. 输出 ZIP 的 SHA256 和字节大小。
+1. 在独立临时目录运行 Release 单元测试并生成 Windows x64 自包含发布目录。
+2. 复制 README、隐私说明、免费使用许可和第三方归属文件。
+3. 创建 `AdbMirrorStudio-V1.0.0-win-x64.zip`。
+4. 输出 ZIP 的 SHA256 和字节大小，并自动清理临时目录。
 
 发布产物：
 
 ```text
 commercial\artifacts\release\
-  win-x64\
-    AdbMirrorStudio.App.exe
-    Tools\
-    Licenses\
-    README.md
-    PRIVACY.md
-    FREE-USE-LICENSE.md
-    THIRD-PARTY-NOTICES.md
   AdbMirrorStudio-V1.0.0-win-x64.zip
+```
+
+生成安装版：
+
+```powershell
+.\scripts\build-installer.ps1
+```
+
+安装器脚本会先生成最新便携包，再使用 NSIS 创建当前用户级 x64 安装程序。可用 `-SkipPortableBuild` 复用现有便携包；可通过 `ADB_MIRROR_SIGN_COMMAND` 提供包含 `%1` 文件占位符的 Authenticode 签名命令，同时签署安装器与卸载器。
+
+安装产物：
+
+```text
+commercial\artifacts\installer\
+  ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe
 ```
 
 ## 第三方组件
@@ -321,6 +340,7 @@ commercial\artifacts\release\
 - SDL 3.4.12
 - FFmpeg 8.1.2 对应的 62.x 动态库
 - libusb 1.0.30
+- NSIS 3.12（仅用于生成安装程序）
 
 正式发行必须保留第三方版权声明、适用许可文本和源码获取方式。不得删除或隐藏开源组件归属。
 
@@ -338,7 +358,7 @@ commercial\artifacts\release\
 - [ ] 在 Windows 10/11、100%–250% DPI、多显示器环境测试
 - [ ] 覆盖 Android 5–16、USB、Android 11+ 无线调试和主流厂商设备
 - [ ] 执行弱网、拔线、设备重启、磁盘不足、权限拒绝及长时间运行测试
-- [ ] 从干净系统完成安装、升级、降级和卸载验证
+- [x] 完成当前用户级静默安装、覆盖升级和卸载验证
 - [ ] 发布 SHA256、版本说明、隐私政策和支持渠道
 
 未完成以上质量项目不会限制软件功能；发布页面应如实说明代码签名和法律材料状态。
