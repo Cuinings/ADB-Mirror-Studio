@@ -10,19 +10,17 @@
 
 ## 下载
 
-当前版本：`V1.1.0`
+当前版本：`V1.2.0`
 
-开发版本：`V1.2.0`（新增应用内安全下载并启动安装更新，尚未发布）
-
-- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.1.0)
-- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe)
-- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/AdbMirrorStudio-V1.1.0-win-x64.zip)
+- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.2.0)
+- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.2.0/ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe)
+- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.2.0/AdbMirrorStudio-V1.2.0-win-x64.zip)
 
 SHA256：
 
 ```text
-安装版  7F9A53B95B3F630C7C56DA12B073EC9C367928256F5494E7B7E30392844DFF77
-便携版  49C52D6E0E1BD86AE146EC5441C33945A3EF7D0DE0A5D10F522EE15E0311CFE3
+安装版  45852CD3D5310A70737194AB8EB4D25935B15CA2ACCB78123911AAF19FD14F4E
+便携版  E8B440DC9E338BC14BA34753EAA652F38B4D3AD87C72846393D2416DA1BCD89E
 ```
 
 ## 主要功能
@@ -88,7 +86,7 @@ SHA256：
 
 ## 快速开始
 
-1. 推荐下载并运行 `ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe`；也可以下载 ZIP 便携版并完整解压。
+1. 推荐下载并运行 `ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe`；也可以下载 ZIP 便携版并完整解压。
 2. 从开始菜单启动 ADB Mirror Studio，便携版则双击 `AdbMirrorStudio.App.exe`。
 3. 在手机中开启“开发者选项”和“USB 调试”。
 4. 首次连接时在手机端允许 USB 调试授权。
@@ -152,7 +150,7 @@ commercial\artifacts\installer\
 
 - [完整使用、开发和发布手册](commercial/README.md)
 - [版本管理与问题修复计划](commercial/VERSIONING.md)
-- [V1.2.0 开发说明](commercial/RELEASE-NOTES-V1.2.0.md)
+- [V1.2.0 发行说明](commercial/RELEASE-NOTES-V1.2.0.md)
 - [V1.1.0 发行说明](commercial/RELEASE-NOTES-V1.1.0.md)
 - [V1.0.1 修复说明](commercial/RELEASE-NOTES-V1.0.1.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
@@ -162,6 +160,6 @@ commercial\artifacts\installer\
 
 ## 发行状态
 
-V1.1.0 为当前免费公开功能版本，提供安装版和便携版；V1.0.0、V1.0.1 Release 与标签继续保留。代码签名和完整第三方许可归档仍属于发行工程改进，不会用于限制功能或建立付费版本。
+V1.2.0 为当前免费公开功能版本，提供安装版和便携版；V1.0.0、V1.0.1、V1.1.0 Release 与标签继续保留。代码签名和完整第三方许可归档仍属于发行工程改进，不会用于限制功能或建立付费版本。
 
 本项目仅应用于用户拥有或已获明确授权的 Android 设备。不得用于未经授权的访问、监控或数据复制。
