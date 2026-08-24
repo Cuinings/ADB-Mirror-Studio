@@ -2,7 +2,7 @@
 
 ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。所有功能永久免费，无账户、无试用、无订阅、无激活和功能分级。
 
-> 当前版本：`V1.0.0` 免费公开版。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
+> 当前版本：`V1.0.1` 免费公开修订版。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
 
 ## 系统要求
 
@@ -88,7 +88,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 
 推荐安装方式：
 
-1. 下载 `ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe`。
+1. 下载与当前公开版本对应的 `ADB-Mirror-Studio-Setup-V主版本.次版本.修订版本-win-x64.exe`。
 2. 双击安装程序，阅读隐私说明和免费使用许可。
 3. 选择安装目录；默认安装到当前用户的 `%LocalAppData%\Programs\ADB Mirror Studio`，无需管理员权限。
 4. 从开始菜单启动。安装程序支持覆盖升级，升级不会删除 `%LocalAppData%\AdbMirrorStudio` 中的设置。
@@ -96,7 +96,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 
 便携方式：
 
-1. 完整解压 `AdbMirrorStudio-V1.0.0-win-x64.zip`，不要直接在压缩包中运行。
+1. 完整解压与当前公开版本对应的 `AdbMirrorStudio-V主版本.次版本.修订版本-win-x64.zip`，不要直接在压缩包中运行。
 2. 进入解压后的目录。
 3. 双击 `AdbMirrorStudio.App.exe`。
 4. 阅读首次运行说明并选择“同意并开始”。
@@ -308,14 +308,14 @@ commercial/
 
 1. 在独立临时目录运行 Release 单元测试并生成 Windows x64 自包含发布目录。
 2. 复制 README、隐私说明、免费使用许可和第三方归属文件。
-3. 创建 `AdbMirrorStudio-V1.0.0-win-x64.zip`。
+3. 根据 `Directory.Build.props` 自动创建带有当前版本号的便携压缩包。
 4. 输出 ZIP 的 SHA256 和字节大小，并自动清理临时目录。
 
 发布产物：
 
 ```text
 commercial\artifacts\release\
-  AdbMirrorStudio-V1.0.0-win-x64.zip
+  AdbMirrorStudio-V1.0.1-win-x64.zip
 ```
 
 生成安装版：
@@ -330,7 +330,7 @@ commercial\artifacts\release\
 
 ```text
 commercial\artifacts\installer\
-  ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe
+  ADB-Mirror-Studio-Setup-V1.0.1-win-x64.exe
 ```
 
 ## 第三方组件
@@ -343,6 +343,16 @@ commercial\artifacts\installer\
 - NSIS 3.12（仅用于生成安装程序）
 
 正式发行必须保留第三方版权声明、适用许可文本和源码获取方式。不得删除或隐藏开源组件归属。
+
+## 版本与问题修复策略
+
+项目采用三段式版本号：
+
+- 小问题发布修订版本：`1.0.0 → 1.0.1`
+- 大问题或保持兼容的重要升级发布次版本：`1.0.0 → 1.1.0`
+- 不兼容的架构、界面或平台升级发布主版本：`1.0.0 → 2.0.0`
+
+正式发布后的版本和标签不覆盖。修复已经发布版本中的问题时必须递增版本号、重新构建并创建新的 Release。详细定级、路线和发布门槛见[版本管理与问题修复计划](VERSIONING.md)。
 
 ## 发行质量检查表
 
@@ -359,6 +369,7 @@ commercial\artifacts\installer\
 - [ ] 覆盖 Android 5–16、USB、Android 11+ 无线调试和主流厂商设备
 - [ ] 执行弱网、拔线、设备重启、磁盘不足、权限拒绝及长时间运行测试
 - [x] 完成当前用户级静默安装、覆盖升级和卸载验证
-- [ ] 发布 SHA256、版本说明、隐私政策和支持渠道
+- [x] 发布 SHA256、版本说明和隐私政策
+- [ ] 公布正式支持渠道
 
 未完成以上质量项目不会限制软件功能；发布页面应如实说明代码签名和法律材料状态。

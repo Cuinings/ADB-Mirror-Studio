@@ -45,7 +45,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
             IUpdateService updates = new GitHubUpdateService(
                 _httpClient,
-                "V1.0.0",
+                AppVersionInfo.ProductVersion,
                 "Cuinings",
                 "ADB-Mirror-Studio");
             IAppSettingsStore settings = new JsonAppSettingsStore(Path.Combine(

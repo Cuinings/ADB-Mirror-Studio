@@ -11,7 +11,12 @@ $dotnet = if (Test-Path -LiteralPath $localDotnet) { $localDotnet } else { 'dotn
 $project = Join-Path $commercialRoot 'src\AdbMirrorStudio.App\AdbMirrorStudio.App.csproj'
 $tests = Join-Path $commercialRoot 'tests\AdbMirrorStudio.UnitTests\AdbMirrorStudio.UnitTests.csproj'
 $artifactRoot = Join-Path $commercialRoot 'artifacts\release'
-$productVersion = 'V1.0.0'
+[xml]$buildProperties = Get-Content (Join-Path $commercialRoot 'Directory.Build.props')
+$versionNode = $buildProperties.SelectSingleNode('/Project/PropertyGroup/Version')
+if ($versionNode -eq $null -or [string]::IsNullOrWhiteSpace($versionNode.InnerText)) {
+    throw 'Directory.Build.props 中缺少 Version。'
+}
+$productVersion = "V$($versionNode.InnerText.Trim())"
 $archivePath = Join-Path $artifactRoot "AdbMirrorStudio-$productVersion-win-x64.zip"
 $stagingDirectory = Join-Path $artifactRoot ".staging-$([Guid]::NewGuid().ToString('N'))"
 $publishDirectory = Join-Path $stagingDirectory 'win-x64'

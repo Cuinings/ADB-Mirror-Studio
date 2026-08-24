@@ -8,10 +8,10 @@ CRCCheck on
 !include "x64.nsh"
 
 !ifndef APP_VERSION
-  !define APP_VERSION "1.0.0"
+  !define APP_VERSION "1.0.1"
 !endif
 !ifndef APP_FILE_VERSION
-  !define APP_FILE_VERSION "1.0.0.0"
+  !define APP_FILE_VERSION "1.0.1.0"
 !endif
 !ifndef SOURCE_DIR
   !error "SOURCE_DIR must point to the unpacked self-contained release directory."
@@ -117,8 +117,15 @@ Section "$(MainSectionName)" MainSection
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   CreateDirectory "$SMPROGRAMS\ADB Mirror Studio"
-  CreateShortcut "$SMPROGRAMS\ADB Mirror Studio\ADB Mirror Studio.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0 SW_SHOWNORMAL "" "Android 镜像与设备管理工作台"
+  CreateShortcut "$SMPROGRAMS\ADB Mirror Studio\ADB Mirror Studio.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\Assets\AppIcon.ico" 0 SW_SHOWNORMAL "" "Android 镜像与设备管理工作台"
   CreateShortcut "$SMPROGRAMS\ADB Mirror Studio\卸载 ADB Mirror Studio.lnk" "$INSTDIR\Uninstall.exe"
+
+  IfFileExists "$QUICKLAUNCH\User Pinned\TaskBar\ADB Mirror Studio.lnk" 0 +2
+    CreateShortcut "$QUICKLAUNCH\User Pinned\TaskBar\ADB Mirror Studio.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\Assets\AppIcon.ico" 0 SW_SHOWNORMAL "" "Android 镜像与设备管理工作台"
+
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+  nsExec::Exec '"$SYSDIR\ie4uinit.exe" -show'
+  Pop $0
 
   WriteRegStr HKCU "${APP_REGISTRY_KEY}" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_REGISTRY_KEY}" "DisplayName" "${APP_NAME} V${APP_VERSION}"
@@ -137,7 +144,7 @@ Section "$(MainSectionName)" MainSection
 SectionEnd
 
 Section /o "$(DesktopSectionName)" DesktopSection
-  CreateShortcut "$DESKTOP\ADB Mirror Studio.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0
+  CreateShortcut "$DESKTOP\ADB Mirror Studio.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\Assets\AppIcon.ico" 0
 SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -156,11 +163,16 @@ Section "Uninstall"
   Sleep 500
 
   Delete "$DESKTOP\ADB Mirror Studio.lnk"
+  Delete "$QUICKLAUNCH\User Pinned\TaskBar\ADB Mirror Studio.lnk"
   Delete "$SMPROGRAMS\ADB Mirror Studio\ADB Mirror Studio.lnk"
   Delete "$SMPROGRAMS\ADB Mirror Studio\卸载 ADB Mirror Studio.lnk"
   RMDir "$SMPROGRAMS\ADB Mirror Studio"
   DeleteRegKey HKCU "${UNINSTALL_REGISTRY_KEY}"
   DeleteRegKey HKCU "${APP_REGISTRY_KEY}"
+
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+  nsExec::Exec '"$SYSDIR\ie4uinit.exe" -show'
+  Pop $0
 
   RMDir /r "$INSTDIR"
 

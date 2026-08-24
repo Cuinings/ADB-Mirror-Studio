@@ -10,17 +10,17 @@
 
 ## 下载
 
-当前版本：`V1.0.0`
+当前版本：`V1.0.1`
 
-- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.0.0)
-- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.0.0/ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe)
-- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.0.0/AdbMirrorStudio-V1.0.0-win-x64.zip)
+- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.0.1)
+- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.0.1/ADB-Mirror-Studio-Setup-V1.0.1-win-x64.exe)
+- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.0.1/AdbMirrorStudio-V1.0.1-win-x64.zip)
 
 SHA256：
 
 ```text
-安装版  500799E3773F95E3DD1274DA51C5A55F8BBD3AB8600FE3624E6616816367CB8C
-便携版  1CC24B5F59172CD4FA69D0BC8C86EAAAE16CBB83F537BBEDD32E42E500DD4A94
+安装版  FA6E8AD254FC858CB38E57413061AF7F00B59A7133D37C9C018B8233A3CB5C0E
+便携版  750CE756EF7F740598579F5681E11F27A338B9CBBBA17B547C5B00398BF91E6D
 ```
 
 ## 主要功能
@@ -86,7 +86,7 @@ SHA256：
 
 ## 快速开始
 
-1. 推荐下载并运行 `ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe`；也可以下载 ZIP 便携版并完整解压。
+1. 推荐下载并运行 `ADB-Mirror-Studio-Setup-V1.0.1-win-x64.exe`；也可以下载 ZIP 便携版并完整解压。
 2. 从开始菜单启动 ADB Mirror Studio，便携版则双击 `AdbMirrorStudio.App.exe`。
 3. 在手机中开启“开发者选项”和“USB 调试”。
 4. 首次连接时在手机端允许 USB 调试授权。
@@ -149,6 +149,8 @@ commercial\artifacts\installer\
 ## 文档
 
 - [完整使用、开发和发布手册](commercial/README.md)
+- [版本管理与问题修复计划](commercial/VERSIONING.md)
+- [V1.0.1 修复说明](commercial/RELEASE-NOTES-V1.0.1.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
 - [隐私说明](commercial/PRIVACY.md)
 - [免费使用许可](commercial/FREE-USE-LICENSE.md)
@@ -156,6 +158,6 @@ commercial\artifacts\installer\
 
 ## 发行状态
 
-V1.0.0 为首个免费公开版本，提供安装版和便携版。代码签名和完整第三方许可归档仍属于发行工程改进，不会用于限制功能或建立付费版本。
+V1.0.1 为当前免费公开修订版本，提供安装版和便携版；V1.0.0 Release 与标签继续保留。代码签名和完整第三方许可归档仍属于发行工程改进，不会用于限制功能或建立付费版本。
 
 本项目仅应用于用户拥有或已获明确授权的 Android 设备。不得用于未经授权的访问、监控或数据复制。

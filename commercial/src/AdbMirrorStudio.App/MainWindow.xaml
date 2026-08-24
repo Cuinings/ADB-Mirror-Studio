@@ -31,7 +31,7 @@
                            LineHeight="20" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" />
                 <Border Grid.Column="2" MinWidth="56" Height="28" Padding="10,0" CornerRadius="9"
                         VerticalAlignment="Center" Background="{ThemeResource AccentFillColorTertiaryBrush}">
-                    <TextBlock Text="V1.0.0" FontSize="10" FontWeight="SemiBold" TextAlignment="Center"
+                    <TextBlock x:Name="VersionText" FontSize="10" FontWeight="SemiBold" TextAlignment="Center"
                                LineHeight="16" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" />
                 </Border>
             </Grid>
