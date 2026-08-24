@@ -6,7 +6,33 @@ dist/
 commercial/**/bin/
 commercial/**/obj/
 commercial/artifacts/
+
+# IDE、调试符号、转储和运行日志
+*.pdb
+*.dbg
+*.dmp
 *.user
 *.suo
 *.log
+*.etl
+*.tmp
+*.download
 
+# 本机设置、缓存和崩溃数据
+settings.json
+credentials.json
+secrets.json
+Crash/
+Updates/
+
+# 环境变量、凭据和代码签名材料
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+*.jks
+*.keystore

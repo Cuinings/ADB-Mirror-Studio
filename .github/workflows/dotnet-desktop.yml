@@ -28,6 +28,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Audit tracked files for sensitive data
+        shell: pwsh
+        run: ./commercial/scripts/test-privacy.ps1
+
       - name: Restore unit tests
         run: dotnet restore commercial/tests/AdbMirrorStudio.UnitTests/AdbMirrorStudio.UnitTests.csproj
 

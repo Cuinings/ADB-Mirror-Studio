@@ -10,6 +10,7 @@ $localDotnet = Join-Path $workspaceRoot '.tools\dotnet\dotnet.exe'
 $dotnet = if (Test-Path -LiteralPath $localDotnet) { $localDotnet } else { 'dotnet' }
 $project = Join-Path $commercialRoot 'src\AdbMirrorStudio.App\AdbMirrorStudio.App.csproj'
 $tests = Join-Path $commercialRoot 'tests\AdbMirrorStudio.UnitTests\AdbMirrorStudio.UnitTests.csproj'
+$privacyAudit = Join-Path $commercialRoot 'scripts\test-privacy.ps1'
 $artifactRoot = Join-Path $commercialRoot 'artifacts\release'
 [xml]$buildProperties = Get-Content (Join-Path $commercialRoot 'Directory.Build.props')
 $versionNode = $buildProperties.SelectSingleNode('/Project/PropertyGroup/Version')
@@ -28,6 +29,8 @@ if (-not $artifactRoot.StartsWith($commercialRoot, [System.StringComparison]::Or
 
 New-Item -ItemType Directory -Path $publishDirectory -Force | Out-Null
 try {
+    & $privacyAudit -RepositoryRoot $workspaceRoot
+
     & $dotnet test $tests --configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw '测试失败，停止发布。' }
 
@@ -38,13 +41,53 @@ try {
         --output $publishDirectory `
         /p:Unpackaged=true `
         /p:PublishSingleFile=false `
-        /p:PublishTrimmed=false
+        /p:PublishTrimmed=false `
+        /p:DebugType=None `
+        /p:DebugSymbols=false
     if ($LASTEXITCODE -ne 0) { throw '发布构建失败。' }
 
     Copy-Item -LiteralPath (Join-Path $commercialRoot 'THIRD-PARTY-NOTICES.md') -Destination $publishDirectory
     Copy-Item -LiteralPath (Join-Path $commercialRoot 'PRIVACY.md') -Destination $publishDirectory
     Copy-Item -LiteralPath (Join-Path $commercialRoot 'FREE-USE-LICENSE.md') -Destination $publishDirectory
     Copy-Item -LiteralPath (Join-Path $commercialRoot 'README.md') -Destination $publishDirectory
+
+    $excludedExtensions = @('.pdb', '.dbg', '.dmp', '.log', '.etl', '.pfx', '.p12', '.pem', '.key', '.snk', '.jks', '.keystore')
+    $excludedNames = @('settings.json', 'credentials.json', 'secrets.json')
+    $excludedReleaseFiles = @(Get-ChildItem -LiteralPath $publishDirectory -Recurse -File | Where-Object {
+        $excludedExtensions -contains $_.Extension.ToLowerInvariant() -or
+        $excludedNames -contains $_.Name.ToLowerInvariant() -or
+        $_.Name.StartsWith('.env', [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    foreach ($excludedFile in $excludedReleaseFiles) {
+        Remove-Item -LiteralPath $excludedFile.FullName -Force
+    }
+
+    $remainingSensitiveFiles = @(Get-ChildItem -LiteralPath $publishDirectory -Recurse -File | Where-Object {
+        $excludedExtensions -contains $_.Extension.ToLowerInvariant() -or
+        $excludedNames -contains $_.Name.ToLowerInvariant() -or
+        $_.Name.StartsWith('.env', [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    if ($remainingSensitiveFiles.Count -gt 0) {
+        throw "发布目录仍包含禁止文件：$($remainingSensitiveFiles.Name -join ', ')"
+    }
+
+    $localPathPattern = '(?i)[A-Z]:[\\/]Users[\\/][^\\/\x00\s]+'
+    $localPathFiles = [System.Collections.Generic.List[string]]::new()
+    $contentAuditFiles = @(Get-ChildItem -LiteralPath $publishDirectory -Recurse -File | Where-Object {
+        $_.Length -le 32MB -or $_.Name.StartsWith('AdbMirrorStudio.', [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    foreach ($contentAuditFile in $contentAuditFiles) {
+        $bytes = [IO.File]::ReadAllBytes($contentAuditFile.FullName)
+        $utf8Content = [Text.Encoding]::UTF8.GetString($bytes)
+        $utf16Content = [Text.Encoding]::Unicode.GetString($bytes)
+        if ($utf8Content -match $localPathPattern -or $utf16Content -match $localPathPattern) {
+            $localPathFiles.Add($contentAuditFile.FullName.Substring($publishDirectory.Length + 1))
+        }
+    }
+    if ($localPathFiles.Count -gt 0) {
+        throw "发布目录包含本机用户路径：$($localPathFiles -join ', ')"
+    }
+
     if (Test-Path -LiteralPath $archivePath) {
         Remove-Item -LiteralPath $archivePath -Force
     }
