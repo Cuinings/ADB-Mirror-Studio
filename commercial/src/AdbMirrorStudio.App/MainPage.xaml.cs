@@ -36,7 +36,6 @@ public sealed partial class MainPage : Page
             if (_shutdown) return;
             ApplyTheme(ViewModel.Theme, updateSelector: true);
             AutoRefreshToggle.IsOn = ViewModel.AutoRefresh;
-            AutoReconnectToggle.IsOn = ViewModel.AutoReconnect;
             if (!ViewModel.FirstRunCompleted) await ShowFirstRunDialogAsync();
             if (!_shutdown) _autoRefreshTimer.Start();
         }
@@ -77,6 +76,11 @@ public sealed partial class MainPage : Page
     private async void Connect_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is not null) await ViewModel.ConnectAsync();
+    }
+
+    private async void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null) await ViewModel.ClearRememberedEndpointsAsync();
     }
 
     private async void Mirror_Click(object sender, RoutedEventArgs e)
@@ -431,12 +435,6 @@ public sealed partial class MainPage : Page
     {
         if (_initializingSettings || ViewModel is null || sender is not ToggleSwitch toggle) return;
         await ViewModel.SetAutoRefreshAsync(toggle.IsOn);
-    }
-
-    private async void AutoReconnectToggle_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (_initializingSettings || ViewModel is null || sender is not ToggleSwitch toggle) return;
-        await ViewModel.SetAutoReconnectAsync(toggle.IsOn);
     }
 
     private async void AutoRefreshTimer_Tick(object? sender, object e)

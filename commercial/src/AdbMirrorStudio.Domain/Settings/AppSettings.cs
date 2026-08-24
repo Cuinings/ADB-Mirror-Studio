@@ -8,13 +8,35 @@ public sealed record AppSettings(
     bool AutoRefresh,
     string MirrorProfileId = "balanced",
     bool FirstRunCompleted = false,
-    bool AutoReconnect = true,
+    bool AutoReconnect = false,
     bool HasConnectedBefore = false)
 {
+    public const int CurrentSchemaVersion = 2;
+
+    public string[] RememberedEndpoints { get; init; } = [];
+
+    public AppSettings UpgradeConnectionHistory()
+    {
+        var history = ConnectionHistory.Normalize(RememberedEndpoints);
+        if (HasConnectedBefore && !string.IsNullOrWhiteSpace(LastEndpoint))
+        {
+            history = ConnectionHistory.Add(history, LastEndpoint);
+        }
+
+        return this with
+        {
+            SchemaVersion = CurrentSchemaVersion,
+            LastEndpoint = history.FirstOrDefault() ?? string.Empty,
+            AutoReconnect = false,
+            HasConnectedBefore = history.Length > 0,
+            RememberedEndpoints = history
+        };
+    }
+
     public static AppSettings Default { get; } = new(
-        1,
+        CurrentSchemaVersion,
         "System",
         "zh-CN",
-        "192.168.1.100:5555",
+        string.Empty,
         true);
 }

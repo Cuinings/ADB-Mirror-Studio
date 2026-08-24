@@ -10,6 +10,7 @@ using AdbMirrorStudio.Application.Updates;
 using AdbMirrorStudio.Domain.Devices;
 using AdbMirrorStudio.Domain.Mirroring;
 using AdbMirrorStudio.Domain.Settings;
+using AdbMirrorStudio.Infrastructure.Adb;
 
 namespace AdbMirrorStudio.App.ViewModels;
 
@@ -59,6 +60,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public ObservableCollection<DeviceCardViewModel> Devices { get; } = [];
+    public ObservableCollection<string> RememberedEndpoints { get; } = [];
     public ObservableCollection<string> DiscoveredPairingEndpoints { get; } = [];
     public ObservableCollection<MirrorSessionCardViewModel> Sessions { get; } = [];
     public ObservableCollection<DiagnosticItemViewModel> Diagnostics { get; } = [];
@@ -129,7 +131,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string OnlineSummary => $"{Devices.Count(device => device.State == DeviceState.Online)} 台在线";
     public string Theme => _settings.Theme;
     public bool AutoRefresh => _settings.AutoRefresh;
-    public bool AutoReconnect => _settings.AutoReconnect;
+    public bool HasRememberedEndpoints => RememberedEndpoints.Count > 0;
     public bool FirstRunCompleted => _settings.FirstRunCompleted;
     public string AppVersion => AppVersionInfo.ProductVersion;
     public string DataDirectory => Path.Combine(
@@ -177,23 +179,35 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task InitializeAsync()
     {
-        _settings = await _settingsStore.LoadAsync();
+        var loadedSettings = await _settingsStore.LoadAsync();
         if (_disposed) return;
-        Endpoint = _settings.LastEndpoint;
+        var upgradedSettings = loadedSettings.UpgradeConnectionHistory();
+        var normalizedHistory = NormalizeConnectionEndpoints(upgradedSettings.RememberedEndpoints);
+        _settings = upgradedSettings with
+        {
+            LastEndpoint = normalizedHistory.FirstOrDefault() ?? string.Empty,
+            HasConnectedBefore = normalizedHistory.Length > 0,
+            RememberedEndpoints = normalizedHistory
+        };
+        var loadedHistory = loadedSettings.RememberedEndpoints ?? [];
+        ReplaceRememberedEndpoints(_settings.RememberedEndpoints);
+        Endpoint = RememberedEndpoints.FirstOrDefault() ?? string.Empty;
         SelectedMirrorProfileId = MirrorProfile.Presets.Any(profile => profile.Id == _settings.MirrorProfileId)
             ? _settings.MirrorProfileId
             : MirrorProfile.Balanced.Id;
         OnPropertyChanged(nameof(Theme));
         OnPropertyChanged(nameof(AutoRefresh));
-        OnPropertyChanged(nameof(AutoReconnect));
+        if (loadedSettings.SchemaVersion != AppSettings.CurrentSchemaVersion
+            || loadedSettings.AutoReconnect
+            || loadedSettings.HasConnectedBefore != _settings.HasConnectedBefore
+            || !string.Equals(loadedSettings.LastEndpoint, _settings.LastEndpoint, StringComparison.OrdinalIgnoreCase)
+            || !loadedHistory.SequenceEqual(_settings.RememberedEndpoints, StringComparer.OrdinalIgnoreCase))
+        {
+            await SaveSettingsSafelyAsync();
+        }
         await DiscoverAsync();
         if (_disposed) return;
         await RefreshAsync();
-        if (_disposed) return;
-        if (_settings.AutoReconnect && _settings.HasConnectedBefore && Devices.All(device => device.Serial != Endpoint))
-        {
-            await ConnectAsync();
-        }
     }
 
     public async Task SetThemeAsync(string theme)
@@ -215,15 +229,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(AutoRefresh));
         await SaveSettingsSafelyAsync();
         StatusText = enabled ? "已启用设备自动刷新（每 5 秒）" : "已关闭设备自动刷新";
-    }
-
-    public async Task SetAutoReconnectAsync(bool enabled)
-    {
-        if (_settings.AutoReconnect == enabled) return;
-        _settings = _settings with { AutoReconnect = enabled };
-        OnPropertyChanged(nameof(AutoReconnect));
-        await SaveSettingsSafelyAsync();
-        StatusText = enabled ? "已启用历史无线设备自动重连" : "已关闭自动重连";
     }
 
     public async Task SetMirrorProfileAsync(string profileId)
@@ -575,13 +580,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task ConnectAsync()
     {
         EnterBusy();
-        StatusText = $"正在连接 {Endpoint}…";
         try
         {
-            var result = await _adb.ConnectAsync(Endpoint);
+            var normalizedEndpoint = AdbEndpoint.Normalize(Endpoint);
+            Endpoint = normalizedEndpoint;
+            StatusText = $"正在连接 {normalizedEndpoint}…";
+            var result = await _adb.ConnectAsync(normalizedEndpoint);
             StatusText = result;
-            _settings = _settings with { LastEndpoint = Endpoint.Trim(), HasConnectedBefore = true };
-            await SaveSettingsSafelyAsync();
+            await RememberEndpointsAsync([normalizedEndpoint]);
             await RefreshAsync();
         }
         catch (Exception exception)
@@ -592,6 +598,22 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             ExitBusy();
         }
+    }
+
+    public async Task ClearRememberedEndpointsAsync()
+    {
+        _settings = _settings with
+        {
+            SchemaVersion = AppSettings.CurrentSchemaVersion,
+            LastEndpoint = string.Empty,
+            AutoReconnect = false,
+            HasConnectedBefore = false,
+            RememberedEndpoints = []
+        };
+        ReplaceRememberedEndpoints([]);
+        Endpoint = string.Empty;
+        await SaveSettingsSafelyAsync();
+        StatusText = "已清除连接历史；当前在线设备不会断开";
     }
 
     public async Task StartMirrorAsync(string serial)
@@ -900,6 +922,58 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             StatusText = $"设置暂时无法保存：{exception.Message}";
         }
+    }
+
+    private async Task RememberEndpointsAsync(IEnumerable<string> endpoints)
+    {
+        var updated = _settings.RememberedEndpoints;
+        foreach (var endpoint in endpoints)
+        {
+            try
+            {
+                updated = ConnectionHistory.Add(updated, AdbEndpoint.Normalize(endpoint));
+            }
+            catch (ArgumentException)
+            {
+                // Ignore malformed serials reported by third-party ADB implementations.
+            }
+        }
+
+        if (updated.SequenceEqual(_settings.RememberedEndpoints, StringComparer.OrdinalIgnoreCase)) return;
+        _settings = _settings with
+        {
+            SchemaVersion = AppSettings.CurrentSchemaVersion,
+            LastEndpoint = updated.FirstOrDefault() ?? string.Empty,
+            AutoReconnect = false,
+            HasConnectedBefore = updated.Length > 0,
+            RememberedEndpoints = updated
+        };
+        ReplaceRememberedEndpoints(updated);
+        await SaveSettingsSafelyAsync();
+    }
+
+    private void ReplaceRememberedEndpoints(IEnumerable<string> endpoints)
+    {
+        RememberedEndpoints.Clear();
+        foreach (var endpoint in endpoints) RememberedEndpoints.Add(endpoint);
+        OnPropertyChanged(nameof(HasRememberedEndpoints));
+    }
+
+    private static string[] NormalizeConnectionEndpoints(IEnumerable<string> endpoints)
+    {
+        var normalized = new List<string>();
+        foreach (var endpoint in endpoints)
+        {
+            try
+            {
+                normalized.Add(AdbEndpoint.Normalize(endpoint));
+            }
+            catch (ArgumentException)
+            {
+                // Ignore invalid entries left by older settings files.
+            }
+        }
+        return ConnectionHistory.Normalize(normalized);
     }
 
     private void EnterBusy()

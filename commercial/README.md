@@ -2,7 +2,7 @@
 
 ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。所有功能永久免费，无账户、无试用、无订阅、无激活和功能分级。
 
-> 当前版本：`V1.0.1` 免费公开修订版。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
+> 当前版本：`V1.1.0` 免费公开版。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
 
 ## 系统要求
 
@@ -24,7 +24,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 - 支持 IPv4、IPv6 和主机名连接
 - 支持 Android 11+ mDNS 发现和六位配对码安全无线配对
 - USB 设备切换至指定 ADB TCP/IP 端口
-- 保存最后一次成功连接的无线地址并可在启动时自动重连
+- 记忆最近 10 个通过应用成功连接的无线地址，可手动选择和清除；启动时不会自动重连
 - 设备状态、连接类型、型号和授权状态显示
 - 设备重启与无线连接断开
 
@@ -77,7 +77,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 
 - 检查随包 ADB、scrcpy、mDNS 服务和 PATH 版本冲突
 - 跟随系统、浅色和深色主题
-- 每 5 秒自动刷新和历史无线设备自动重连开关
+- 每 5 秒自动刷新；无线连接历史仅保存在本机并始终由用户手动连接
 - 设置使用原子 JSON 写入，降低异常退出导致配置损坏的风险
 - 未处理异常写入本机崩溃日志
 - 默认不包含遥测、广告 SDK 或自动日志上传
@@ -175,7 +175,7 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
     crash-yyyyMMdd-HHmmssfff.log
 ```
 
-删除该目录会重置主题、自动刷新、自动重连、上次无线地址、镜像预设及首次运行状态。删除前请先退出应用。
+删除该目录会重置主题、自动刷新、无线连接历史、镜像预设及首次运行状态。删除前请先退出应用。
 
 相关文档：
 
@@ -315,7 +315,7 @@ commercial/
 
 ```text
 commercial\artifacts\release\
-  AdbMirrorStudio-V1.0.1-win-x64.zip
+  AdbMirrorStudio-V1.1.0-win-x64.zip
 ```
 
 生成安装版：
@@ -330,7 +330,7 @@ commercial\artifacts\release\
 
 ```text
 commercial\artifacts\installer\
-  ADB-Mirror-Studio-Setup-V1.0.1-win-x64.exe
+  ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe
 ```
 
 ## 第三方组件

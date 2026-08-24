@@ -64,12 +64,17 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <FontIcon Glyph="&#xE839;" FontSize="20" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="1" Header="无线地址" Text="{Binding Endpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 PlaceholderText="192.168.1.20:5555、主机名或 IPv6" />
+                        <ComboBox Grid.Column="1" Header="无线地址"
+                                  ItemsSource="{Binding RememberedEndpoints}"
+                                  Text="{Binding Endpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEditable="True" PlaceholderText="输入地址或选择历史记录" />
                         <Button Grid.Column="2" Content="连接设备" VerticalAlignment="Bottom" Click="Connect_Click"
                                 IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
+                        <Button Grid.Column="3" Content="清除记录" VerticalAlignment="Bottom" Click="ClearHistory_Click"
+                                IsEnabled="{Binding HasRememberedEndpoints}" />
                     </Grid>
                 </Border>
 
@@ -599,23 +604,9 @@
                             </RadioButtons>
                         </StackPanel>
                     </Border>
-                    <Border Padding="18" CornerRadius="14"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                        <Grid ColumnSpacing="18">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="自动重连无线设备" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="启动时尝试连接上一次成功使用的无线地址" Opacity="0.62" />
-                            </StackPanel>
-                            <ToggleSwitch x:Name="AutoReconnectToggle" Grid.Column="1"
-                                          OnContent="开启" OffContent="关闭"
-                                          Toggled="AutoReconnectToggle_Toggled" VerticalAlignment="Center" />
-                        </Grid>
-                    </Border>
+                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                             Title="连接历史"
+                             Message="成功连接过的无线地址仅保存在本机，启动时不会自动重连；请在设备中心手动选择并连接。" />
                     <Border Padding="18" CornerRadius="14"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
