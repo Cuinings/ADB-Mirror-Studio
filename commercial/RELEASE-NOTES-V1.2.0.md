@@ -1,4 +1,4 @@
-# ADB Mirror Studio V1.2.0（开发中）
+# ADB Mirror Studio V1.2.0
 
 `V1.2.0` 是保持现有设备连接、镜像控制和设置兼容的免费功能版本。
 

@@ -8,19 +8,17 @@
 
 ## 下载
 
-当前版本：`V1.1.0`
+当前版本：`V1.2.0`
 
-开发版本：`V1.2.0`（新增运行中开始/停止录制，尚未发布）
-
-- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.1.0)
-- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe)
-- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/AdbMirrorStudio-V1.1.0-win-x64.zip)
+- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.2.0)
+- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.2.0/ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe)
+- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.2.0/AdbMirrorStudio-V1.2.0-win-x64.zip)
 
 SHA256：
 
 ```text
-安装版  7D3B42B86D243B3D40566FA77633B2576F66A7CE8CC3DFE7CA8414CF3D1DF822
-便携版  93F6155DF343B9BD9FD87AE25C66454C7F9E614A931E28CA0BF1676C745CFF9A
+安装版  D4DAA01DD04AF43759E0EE40BED63F69758EDD471FCEB450AF3E98E7CC4F1C2B
+便携版  EFC56E75A1E480CD4592E5846862B707BEE45FCA01DDD6BE13E36355B40F65F8
 ```
 
 ## 主要功能
@@ -58,7 +56,7 @@ SHA256：
 
 ### 安装版
 
-1. 下载 `ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe`。
+1. 下载 `ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe`。
 2. 核对上方 SHA256 后运行安装程序。
 3. 从开始菜单打开 ADB Mirror Studio。
 
@@ -66,7 +64,7 @@ SHA256：
 
 ### 便携版
 
-1. 下载 `AdbMirrorStudio-V1.1.0-win-x64.zip`。
+1. 下载 `AdbMirrorStudio-V1.2.0-win-x64.zip`。
 2. 完整解压 ZIP，不要直接在压缩包中运行。
 3. 双击 `AdbMirrorStudio.App.exe`。
 
@@ -156,7 +154,7 @@ SHA256：
 - [完整使用、开发和发布手册](commercial/README.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
 - [V1.1.0 发行说明](commercial/RELEASE-NOTES-V1.1.0.md)
-- [V1.2.0 开发说明](commercial/RELEASE-NOTES-V1.2.0.md)
+- [V1.2.0 发行说明](commercial/RELEASE-NOTES-V1.2.0.md)
 - [版本管理规则](commercial/VERSIONING.md)
 - [隐私说明](commercial/PRIVACY.md)
 - [免费使用许可](commercial/FREE-USE-LICENSE.md)
