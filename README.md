@@ -10,6 +10,8 @@
 
 当前版本：`V1.1.0`
 
+开发版本：`V1.2.0`（新增运行中开始/停止录制，尚未发布）
+
 - [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.1.0)
 - [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/ADB-Mirror-Studio-Setup-V1.1.0-win-x64.exe)
 - [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.1.0/AdbMirrorStudio-V1.1.0-win-x64.zip)
@@ -29,6 +31,7 @@ SHA256：
 - 流畅、均衡、高清、演示四档 scrcpy 镜像预设
 - 自动选择 H.264、H.265 等设备支持的视频编码器
 - MP4/MKV 录屏、录制中心和镜像会话管理
+- 在运行中的镜像会话直接开始或停止录制，并保留镜像窗口位置
 - 多设备镜像窗口宫格、横向或纵向排列
 - APK 覆盖安装
 - 多选、拖放、逐项状态和可取消的文件上传队列
@@ -153,6 +156,7 @@ SHA256：
 - [完整使用、开发和发布手册](commercial/README.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
 - [V1.1.0 发行说明](commercial/RELEASE-NOTES-V1.1.0.md)
+- [V1.2.0 开发说明](commercial/RELEASE-NOTES-V1.2.0.md)
 - [版本管理规则](commercial/VERSIONING.md)
 - [隐私说明](commercial/PRIVACY.md)
 - [免费使用许可](commercial/FREE-USE-LICENSE.md)

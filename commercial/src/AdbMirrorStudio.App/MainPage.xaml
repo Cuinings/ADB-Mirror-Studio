@@ -234,8 +234,12 @@
                                             Background="{ThemeResource AccentFillColorTertiaryBrush}" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding StateLabel}" />
                                     </Border>
-                                    <Button Grid.Column="3" Margin="8,0,0,0" Content="停止"
-                                            CommandParameter="{Binding DeviceSerial}" Click="StopMirror_Click" />
+                                    <StackPanel Grid.Column="3" Margin="8,0,0,0" Orientation="Horizontal" Spacing="8">
+                                        <Button Content="{Binding RecordingButtonText}"
+                                                CommandParameter="{Binding DeviceSerial}" Click="ToggleSessionRecording_Click" />
+                                        <Button Content="停止镜像"
+                                                CommandParameter="{Binding DeviceSerial}" Click="StopMirror_Click" />
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -246,7 +250,7 @@
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                         <StackPanel Spacing="10">
                         <TextBlock Text="录制中心" FontSize="18" FontWeight="SemiBold" />
-                        <TextBlock Text="选择录屏文件并启动新的镜像会话后，录制任务会显示在这里。已运行的镜像需要先停止，才能切换为录制模式。"
+                        <TextBlock Text="可在上方运行中的镜像会话直接开始或停止录制。切换时会自动保存窗口位置并快速重启一次镜像，以确保录像文件正常封装。"
                                    TextWrapping="Wrap" Opacity="0.66" />
                         <ListView ItemsSource="{Binding Recordings}" MaxHeight="220" SelectionMode="None" Background="Transparent">
                             <ListView.ItemTemplate>

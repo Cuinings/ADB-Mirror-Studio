@@ -157,6 +157,19 @@ public sealed partial class MainPage : Page
         await ViewModel.StopMirrorAsync(serial);
     }
 
+    private async void ToggleSessionRecording_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || ViewModel.IsBusy || sender is not Button { DataContext: MirrorSessionCardViewModel session }) return;
+        if (session.IsRecording)
+        {
+            await ViewModel.ToggleMirrorRecordingAsync(session.DeviceSerial);
+            return;
+        }
+
+        var file = await PickRecordingFileAsync();
+        if (file is not null) await ViewModel.ToggleMirrorRecordingAsync(session.DeviceSerial, file.Path);
+    }
+
     private async void ArrangeWindows_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is null || sender is not FrameworkElement { Tag: string tag }) return;
@@ -440,7 +453,14 @@ public sealed partial class MainPage : Page
 
     private async void ChooseRecordingPath_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is null || Microsoft.UI.Xaml.Application.Current is not App { MainWindow: not null } app) return;
+        if (ViewModel is null) return;
+        var file = await PickRecordingFileAsync();
+        if (file is not null) ViewModel.RecordingPath = file.Path;
+    }
+
+    private static async Task<StorageFile?> PickRecordingFileAsync()
+    {
+        if (Microsoft.UI.Xaml.Application.Current is not App { MainWindow: not null } app) return null;
         var picker = new FileSavePicker
         {
             SuggestedStartLocation = PickerLocationId.VideosLibrary,
@@ -449,8 +469,7 @@ public sealed partial class MainPage : Page
         picker.FileTypeChoices.Add("Matroska 视频", [".mkv"]);
         picker.FileTypeChoices.Add("MP4 视频", [".mp4"]);
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(app.MainWindow));
-        var file = await picker.PickSaveFileAsync();
-        if (file is not null) ViewModel.RecordingPath = file.Path;
+        return await picker.PickSaveFileAsync();
     }
 
     private void ClearRecordingPath_Click(object sender, RoutedEventArgs e)

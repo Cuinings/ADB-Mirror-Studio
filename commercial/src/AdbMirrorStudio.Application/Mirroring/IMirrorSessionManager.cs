@@ -12,5 +12,13 @@ public interface IMirrorSessionManager : IAsyncDisposable
         string? windowTitle = null,
         CancellationToken cancellationToken = default);
     Task StopAsync(string deviceSerial, CancellationToken cancellationToken = default);
+    async Task<MirrorSession> RestartAsync(
+        string deviceSerial,
+        MirrorProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        await StopAsync(deviceSerial, cancellationToken).ConfigureAwait(false);
+        return await StartAsync(deviceSerial, profile, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
     Task<int> ArrangeWindowsAsync(MirrorWindowLayout layout, CancellationToken cancellationToken = default) => Task.FromResult(0);
 }

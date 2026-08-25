@@ -51,7 +51,9 @@ public sealed record MirrorSession(
     int MaxSize = 0,
     int MaxFps = 0,
     int VideoBitRateMbps = 0,
-    string? RecordPath = null);
+    string? RecordPath = null,
+    MirrorProfile? Profile = null,
+    string? WindowTitle = null);
 
 public enum MirrorWindowLayout
 {

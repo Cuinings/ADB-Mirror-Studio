@@ -97,4 +97,66 @@ public sealed class ScrcpyArgumentBuilderTests
         var profile = MirrorProfile.Balanced with { VideoCodec = "unknown" };
         Assert.Throws<ArgumentOutOfRangeException>(() => ScrcpyArgumentBuilder.Build("device", profile));
     }
+
+    [Fact]
+    public void MirrorRecordingProfile_StartsRecordingWithoutFullscreenOrAlwaysOnTop()
+    {
+        var activeProfile = MirrorProfile.Quality with
+        {
+            Fullscreen = true,
+            AlwaysOnTop = true,
+            VideoCodec = "h265"
+        };
+        var session = new MirrorSession(
+            "session",
+            "device",
+            MirrorSessionState.Running,
+            42,
+            DateTimeOffset.UtcNow,
+            ProfileName: activeProfile.Name,
+            VideoCodec: activeProfile.VideoCodec,
+            MaxSize: activeProfile.MaxSize,
+            MaxFps: activeProfile.MaxFps,
+            VideoBitRateMbps: activeProfile.VideoBitRateMbps,
+            Profile: activeProfile);
+        var path = Path.Combine(Path.GetTempPath(), "运行中开始录制.mkv");
+
+        var recordingProfile = MirrorRecordingProfile.Create(session, path);
+
+        Assert.Equal(Path.GetFullPath(path), recordingProfile.RecordPath);
+        Assert.False(recordingProfile.Fullscreen);
+        Assert.False(recordingProfile.AlwaysOnTop);
+        Assert.Equal("h265", recordingProfile.VideoCodec);
+    }
+
+    [Fact]
+    public void MirrorRecordingProfile_StopsRecordingAndPreservesCaptureSettings()
+    {
+        var activeProfile = MirrorProfile.Presentation with
+        {
+            RecordPath = Path.Combine(Path.GetTempPath(), "active.mp4"),
+            VideoCodec = "h264"
+        };
+        var session = new MirrorSession(
+            "session",
+            "device",
+            MirrorSessionState.Running,
+            42,
+            DateTimeOffset.UtcNow,
+            ProfileName: activeProfile.Name,
+            VideoCodec: activeProfile.VideoCodec,
+            MaxSize: activeProfile.MaxSize,
+            MaxFps: activeProfile.MaxFps,
+            VideoBitRateMbps: activeProfile.VideoBitRateMbps,
+            RecordPath: activeProfile.RecordPath,
+            Profile: activeProfile);
+
+        var mirrorProfile = MirrorRecordingProfile.Create(session, null);
+
+        Assert.Null(mirrorProfile.RecordPath);
+        Assert.Equal(activeProfile.MaxSize, mirrorProfile.MaxSize);
+        Assert.Equal(activeProfile.MaxFps, mirrorProfile.MaxFps);
+        Assert.Equal(activeProfile.VideoBitRateMbps, mirrorProfile.VideoBitRateMbps);
+        Assert.Equal(activeProfile.VideoCodec, mirrorProfile.VideoCodec);
+    }
 }

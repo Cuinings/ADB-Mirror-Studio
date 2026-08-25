@@ -726,6 +726,56 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task ToggleMirrorRecordingAsync(string serial, string? recordPath = null)
+    {
+        var current = _mirrorSessions.ActiveSessions.FirstOrDefault(session =>
+            session.DeviceSerial == serial && session.State == MirrorSessionState.Running);
+        if (current is null)
+        {
+            StatusText = $"设备 {serial} 没有正在运行的镜像";
+            return;
+        }
+
+        var isStoppingRecording = !string.IsNullOrWhiteSpace(current.RecordPath);
+        if (!isStoppingRecording && string.IsNullOrWhiteSpace(recordPath))
+        {
+            StatusText = "请选择录屏文件";
+            return;
+        }
+
+        EnterBusy();
+        var completedPath = current.RecordPath;
+        StatusText = isStoppingRecording
+            ? $"正在停止 {serial} 的录制并恢复普通镜像…"
+            : $"正在为 {serial} 开始录制，镜像会短暂重启…";
+        try
+        {
+            var profile = MirrorRecordingProfile.Create(current, isStoppingRecording ? null : recordPath);
+            var restarted = await _mirrorSessions.RestartAsync(serial, profile);
+            if (isStoppingRecording)
+            {
+                if (!string.IsNullOrWhiteSpace(completedPath)
+                    && string.Equals(RecordingPath, completedPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    RecordingPath = string.Empty;
+                }
+                StatusText = $"{serial} 的录制已停止并保存到 {completedPath}";
+            }
+            else
+            {
+                StatusText = $"{serial} 已开始录制到 {restarted.RecordPath}";
+            }
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"切换录制状态失败：{exception.Message}";
+        }
+        finally
+        {
+            ExitBusy();
+        }
+    }
+
     public async Task RunDiagnosticsAsync()
     {
         EnterBusy();
@@ -1213,12 +1263,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             if (_disposed) return;
             var card = Devices.FirstOrDefault(device => device.Serial == session.DeviceSerial);
-            if (card is not null) card.IsMirroring = session.State == MirrorSessionState.Running;
             var existing = Sessions.FirstOrDefault(item => item.DeviceSerial == session.DeviceSerial);
-            if (existing is not null) Sessions.Remove(existing);
-            if (session.State is MirrorSessionState.Starting or MirrorSessionState.Running or MirrorSessionState.Stopping)
+            var isActiveState = session.State is MirrorSessionState.Starting or MirrorSessionState.Running or MirrorSessionState.Stopping;
+            var isStaleTerminalEvent = existing is not null
+                && existing.Session.Id != session.Id
+                && !isActiveState;
+            if (!isStaleTerminalEvent)
             {
-                Sessions.Add(new MirrorSessionCardViewModel(session));
+                if (card is not null) card.IsMirroring = session.State == MirrorSessionState.Running;
+                if (existing is not null) Sessions.Remove(existing);
+                if (isActiveState) Sessions.Add(new MirrorSessionCardViewModel(session));
             }
             if (!string.IsNullOrWhiteSpace(session.RecordPath))
             {
@@ -1300,6 +1354,8 @@ public sealed record MirrorSessionCardViewModel(MirrorSession Session)
     public string StartedAtLabel => Session.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     public string PerformanceLabel => $"{Session.ProfileName} · {Session.VideoCodec.ToUpperInvariant()} · {Session.MaxSize}px · {Session.MaxFps} FPS · {Session.VideoBitRateMbps} Mbps";
     public string RecordingLabel => string.IsNullOrWhiteSpace(Session.RecordPath) ? "未录制" : $"录制：{System.IO.Path.GetFileName(Session.RecordPath)}";
+    public bool IsRecording => !string.IsNullOrWhiteSpace(Session.RecordPath);
+    public string RecordingButtonText => IsRecording ? "停止录制" : "开始录制";
 }
 
 public sealed record DiagnosticItemViewModel(DiagnosticItem Item)

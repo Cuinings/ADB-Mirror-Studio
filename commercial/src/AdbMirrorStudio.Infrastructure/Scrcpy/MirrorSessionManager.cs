@@ -90,7 +90,9 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
                 MaxSize: resolvedProfile.MaxSize,
                 MaxFps: resolvedProfile.MaxFps,
                 VideoBitRateMbps: resolvedProfile.VideoBitRateMbps,
-                RecordPath: resolvedProfile.RecordPath);
+                RecordPath: resolvedProfile.RecordPath,
+                Profile: resolvedProfile,
+                WindowTitle: windowTitle);
             var managed = new ManagedSession(process, session);
             if (recordPath is not null && !_recordingOwners.TryAdd(recordPath, deviceSerial))
             {
@@ -146,12 +148,27 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
             if (IsRunning(managed.Process))
             {
                 var closeRequested = managed.Process.CloseMainWindow();
+                if (!closeRequested && !string.IsNullOrWhiteSpace(managed.Session.RecordPath))
+                {
+                    var handleDeadline = DateTime.UtcNow.AddSeconds(3);
+                    while (IsRunning(managed.Process)
+                           && managed.Process.MainWindowHandle == 0
+                           && DateTime.UtcNow < handleDeadline)
+                    {
+                        await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+                        managed.Process.Refresh();
+                    }
+                    if (IsRunning(managed.Process)) closeRequested = managed.Process.CloseMainWindow();
+                }
                 if (closeRequested)
                 {
                     try
                     {
+                        var gracefulTimeout = string.IsNullOrWhiteSpace(managed.Session.RecordPath)
+                            ? TimeSpan.FromSeconds(5)
+                            : TimeSpan.FromSeconds(15);
                         await managed.Process.WaitForExitAsync(cancellationToken)
-                            .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)
+                            .WaitAsync(gracefulTimeout, cancellationToken)
                             .ConfigureAwait(false);
                     }
                     catch (TimeoutException)
@@ -167,6 +184,89 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         finally
         {
             sessionLock.Release();
+        }
+    }
+
+    public async Task<MirrorSession> RestartAsync(
+        string deviceSerial,
+        MirrorProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceSerial);
+        ArgumentNullException.ThrowIfNull(profile);
+        if (!_sessions.TryGetValue(deviceSerial, out var current) || !IsRunning(current.Process))
+        {
+            throw new InvalidOperationException($"设备 {deviceSerial} 没有正在运行的镜像。");
+        }
+
+        var previousProfile = current.Session.Profile;
+        var windowTitle = current.Session.WindowTitle;
+        var windowBounds = TryGetWindowBounds(current.Process);
+        _ = ScrcpyArgumentBuilder.Build(deviceSerial, profile, windowTitle);
+        if (!string.IsNullOrWhiteSpace(profile.RecordPath)) _ = PrepareRecordPath(profile.RecordPath);
+
+        await StopAsync(deviceSerial, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var restarted = await StartAsync(deviceSerial, profile, windowTitle, cancellationToken).ConfigureAwait(false);
+            await RestoreWindowBoundsAsync(deviceSerial, windowBounds, cancellationToken).ConfigureAwait(false);
+            return restarted;
+        }
+        catch (Exception switchException) when (switchException is not OperationCanceledException)
+        {
+            if (previousProfile is null || !string.IsNullOrWhiteSpace(previousProfile.RecordPath)) throw;
+            try
+            {
+                _ = await StartAsync(deviceSerial, previousProfile, windowTitle, cancellationToken).ConfigureAwait(false);
+                await RestoreWindowBoundsAsync(deviceSerial, windowBounds, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception rollbackException) when (rollbackException is not OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    $"切换录制状态失败，且无法恢复原镜像：{rollbackException.Message}",
+                    new AggregateException(switchException, rollbackException));
+            }
+            throw new InvalidOperationException($"切换录制状态失败，已恢复原镜像：{switchException.Message}", switchException);
+        }
+    }
+
+    private static WindowBounds? TryGetWindowBounds(Process process)
+    {
+        try
+        {
+            process.Refresh();
+            return process.MainWindowHandle != 0 && NativeMethods.GetWindowRect(process.MainWindowHandle, out var bounds)
+                ? new WindowBounds(bounds.Left, bounds.Top, bounds.Right - bounds.Left, bounds.Bottom - bounds.Top)
+                : null;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return null;
+        }
+    }
+
+    private async Task RestoreWindowBoundsAsync(
+        string deviceSerial,
+        WindowBounds? bounds,
+        CancellationToken cancellationToken)
+    {
+        if (bounds is null || !_sessions.TryGetValue(deviceSerial, out var session)) return;
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (session.Process.MainWindowHandle == 0 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+            session.Process.Refresh();
+        }
+        if (session.Process.MainWindowHandle != 0)
+        {
+            NativeMethods.MoveWindow(
+                session.Process.MainWindowHandle,
+                bounds.X,
+                bounds.Y,
+                Math.Max(320, bounds.Width),
+                Math.Max(240, bounds.Height),
+                true);
         }
     }
 
@@ -344,6 +444,8 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         public volatile bool StopRequested;
     }
 
+    private sealed record WindowBounds(int X, int Y, int Width, int Height);
+
     private static partial class NativeMethods
     {
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
@@ -356,5 +458,9 @@ public sealed class MirrorSessionManager(IAdbService adbService, string scrcpyPa
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
         internal static extern bool MoveWindow(nint window, int x, int y, int width, int height, bool repaint);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        internal static extern bool GetWindowRect(nint window, out Rect value);
     }
 }
