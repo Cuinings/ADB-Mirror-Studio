@@ -29,7 +29,16 @@ public sealed record DeviceInfo(
     ConnectionKind ConnectionKind,
     DateTimeOffset LastSeen)
 {
-    public string DisplayName => Model == "—" ? Serial : Model;
+    public string DisplayName
+    {
+        get
+        {
+            var deviceName = Model == "—" ? "未知设备" : Model;
+            return ConnectionKind == ConnectionKind.TcpIp
+                ? $"{deviceName}/{Serial}"
+                : Model == "—" ? Serial : deviceName;
+        }
+    }
 }
 
 public sealed record MdnsService(string Name, string ServiceType, string Endpoint);

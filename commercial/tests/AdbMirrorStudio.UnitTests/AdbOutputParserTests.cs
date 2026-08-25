@@ -20,11 +20,28 @@ public sealed class AdbOutputParserTests
 
         Assert.Equal(3, devices.Count);
         Assert.Equal("SM S9180", devices[0].Model);
+        Assert.Equal("SM S9180", devices[0].DisplayName);
         Assert.Equal(DeviceState.Online, devices[0].State);
         Assert.Equal(ConnectionKind.Usb, devices[0].ConnectionKind);
         Assert.Equal(DeviceState.Offline, devices[1].State);
         Assert.Equal(ConnectionKind.TcpIp, devices[1].ConnectionKind);
+        Assert.Equal("Pixel 7/192.168.1.20:37133", devices[1].DisplayName);
         Assert.Equal(DeviceState.Unauthorized, devices[2].State);
+        Assert.Equal("emulator-5554", devices[2].DisplayName);
+    }
+
+    [Fact]
+    public void DisplayName_UsesFallbackNameForUnknownTcpDevice()
+    {
+        var device = new DeviceInfo(
+            "10.0.0.8:5555",
+            "—",
+            "—",
+            DeviceState.Online,
+            ConnectionKind.TcpIp,
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal("未知设备/10.0.0.8:5555", device.DisplayName);
     }
 
     [Fact]
@@ -42,4 +59,3 @@ public sealed class AdbOutputParserTests
         Assert.Equal("192.168.1.8:38555", services[1].Endpoint);
     }
 }
-
