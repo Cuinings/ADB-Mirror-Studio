@@ -5,125 +5,99 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="Transparent">
 
-    <NavigationView x:Name="Navigation" PaneDisplayMode="Auto" IsBackButtonVisible="Collapsed"
-                    IsSettingsVisible="True" OpenPaneLength="220" CompactPaneLength="48"
-                    CompactModeThresholdWidth="720" ExpandedModeThresholdWidth="1180"
-                    Background="Transparent" SelectionChanged="Navigation_SelectionChanged">
-        <NavigationView.MenuItems>
-            <NavigationViewItem Content="设备中心" Tag="devices" IsSelected="True">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="镜像会话" Tag="sessions">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE714;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="文件与 APK" Tag="files">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="设备工具" Tag="tools">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="诊断中心" Tag="diagnostics">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="关于" Tag="about">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE946;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-        </NavigationView.MenuItems>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid x:Name="DeviceCenterView" Margin="24,20,24,20" MaxWidth="1200" HorizontalAlignment="Stretch">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <NavigationView x:Name="Navigation" PaneDisplayMode="Auto" IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="True" OpenPaneLength="220" CompactPaneLength="48"
+                        CompactModeThresholdWidth="720" ExpandedModeThresholdWidth="1180"
+                        Background="Transparent" SelectionChanged="Navigation_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="DevicesNavigationItem" Content="设备" Tag="devices" IsSelected="True">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8EA;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="镜像与录制" Tag="sessions">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE714;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="文件传输" Tag="files">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="设备工具" Tag="tools">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="设备中心" FontSize="28" FontWeight="SemiBold" />
-                        <TextBlock Text="连接 Android 设备并管理实时镜像会话" Opacity="0.68" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                        <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
-                        <Button Content="刷新设备" Click="Refresh_Click" IsEnabled="{Binding IsIdle}" />
-                    </StackPanel>
-                </Grid>
-
-                <StackPanel Grid.Row="1" Margin="0,22,0,16" Spacing="10">
-                <Border Padding="18" CornerRadius="14"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                    <Grid ColumnSpacing="12">
+            <Grid>
+                <Grid x:Name="DeviceCenterView" Margin="24,20,24,16" MaxWidth="1200" HorizontalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="&#xE839;" FontSize="20" VerticalAlignment="Center" />
-                        <ComboBox Grid.Column="1" Header="无线地址"
-                                  ItemsSource="{Binding RememberedEndpoints}"
-                                  Text="{Binding Endpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEditable="True" PlaceholderText="输入地址或选择历史记录" />
-                        <Button Grid.Column="2" Content="连接设备" VerticalAlignment="Bottom" Click="Connect_Click"
-                                IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
-                        <Button Grid.Column="3" Content="清除记录" VerticalAlignment="Bottom" Click="ClearHistory_Click"
-                                IsEnabled="{Binding HasRememberedEndpoints}" />
-                    </Grid>
-                </Border>
-
-                <Expander Header="Android 11+ 安全无线配对" IsExpanded="False">
-                    <Grid Padding="0,12,0,2" ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <ComboBox ItemsSource="{Binding DiscoveredPairingEndpoints}" Text="{Binding PairEndpoint, Mode=TwoWay}"
-                                  IsEditable="True" PlaceholderText="IP:配对端口" />
-                        <PasswordBox x:Name="PairingCodeBox" Grid.Column="1" PlaceholderText="六位配对码"
-                                     PasswordChanged="PairingCodeBox_PasswordChanged" />
-                        <Button Grid.Column="2" Content="配对" Click="Pair_Click" IsEnabled="{Binding IsIdle}"
-                                Style="{ThemeResource AccentButtonStyle}" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="设备" FontSize="28" FontWeight="SemiBold" />
+                            <TextBlock Text="连接 Android 设备并选择后续任务的目标设备" Opacity="0.68" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
+                            <Button x:Name="RefreshDevicesButton" Content="刷新设备" Click="Refresh_Click"
+                                    IsEnabled="{Binding IsIdle}" />
+                        </StackPanel>
                     </Grid>
-                </Expander>
-                <Expander Header="镜像质量与录屏" IsExpanded="False">
-                    <Grid Padding="0,12,0,2" ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="MirrorProfileSelector" Header="质量预设"
-                                  ItemsSource="{Binding MirrorProfiles}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                  SelectedValue="{Binding SelectedMirrorProfileId, Mode=TwoWay}"
-                                  SelectionChanged="MirrorProfileSelector_SelectionChanged" />
-                        <TextBox Grid.Column="1" Header="录屏文件（可选）" Text="{Binding RecordingPath}"
-                                 IsReadOnly="True" PlaceholderText="不录制" />
-                        <Button Grid.Column="2" Content="选择位置" Click="ChooseRecordingPath_Click" VerticalAlignment="Bottom" />
-                        <Button Grid.Column="3" Content="清除" Click="ClearRecordingPath_Click" VerticalAlignment="Bottom" />
+
+                    <Expander Grid.Row="1" Margin="0,20,0,16" Header="添加或连接设备" IsExpanded="False">
+                        <StackPanel Padding="0,12,0,2" Spacing="12">
+                            <Border Padding="16" CornerRadius="12"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="地址连接" FontSize="17" FontWeight="SemiBold" />
+                                        <TextBlock Text="输入无线地址或选择本机记忆的历史记录；启动时不会自动重连" Opacity="0.62" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ComboBox Header="无线地址" ItemsSource="{Binding RememberedEndpoints}"
+                                              Text="{Binding Endpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              IsEditable="True" PlaceholderText="IP:端口、IPv6 地址或主机名" />
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Button Content="连接设备" Click="Connect_Click" IsEnabled="{Binding IsIdle}"
+                                                Style="{ThemeResource AccentButtonStyle}" />
+                                        <Button Content="清除记录" Click="ClearHistory_Click"
+                                                IsEnabled="{Binding HasRememberedEndpoints}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Expander Header="Android 11+ 安全无线配对" IsExpanded="False">
+                                <StackPanel Padding="0,12,0,2" Spacing="10">
+                                    <ComboBox ItemsSource="{Binding DiscoveredPairingEndpoints}"
+                                              Text="{Binding PairEndpoint, Mode=TwoWay}" IsEditable="True"
+                                              Header="配对地址" PlaceholderText="IP:配对端口" />
+                                    <PasswordBox x:Name="PairingCodeBox" Header="六位配对码"
+                                                 PasswordChanged="PairingCodeBox_PasswordChanged" />
+                                    <Button Content="配对" Click="Pair_Click" IsEnabled="{Binding IsIdle}"
+                                            Style="{ThemeResource AccentButtonStyle}" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Expander>
+
+                    <Grid Grid.Row="2" Margin="0,4,0,10">
+                        <TextBlock Text="已发现设备" FontSize="18" FontWeight="SemiBold" />
+                        <Border HorizontalAlignment="Right" Padding="10,4" CornerRadius="10"
+                                Background="{ThemeResource AccentFillColorTertiaryBrush}">
+                            <TextBlock Text="{Binding OnlineSummary}" FontWeight="SemiBold" />
+                        </Border>
                     </Grid>
-                </Expander>
-                </StackPanel>
-
-                <Grid Grid.Row="2" Margin="0,4,0,10">
-                    <TextBlock Text="已发现设备" FontSize="18" FontWeight="SemiBold" />
-                    <Border HorizontalAlignment="Right" Padding="10,4" CornerRadius="10"
-                            Background="{ThemeResource AccentFillColorTertiaryBrush}">
-                        <TextBlock Text="{Binding OnlineSummary}" FontWeight="SemiBold" />
-                    </Border>
-                </Grid>
-
-                <Grid Grid.Row="3">
-                    <ListView ItemsSource="{Binding Devices}" SelectionMode="None" Background="Transparent"
-                              ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                    <ListView Grid.Row="3" ItemsSource="{Binding Devices}" SelectionMode="None"
+                              Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -136,14 +110,16 @@
                                 <Border Padding="16" CornerRadius="12"
                                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                    <Grid ColumnSpacing="14">
+                                    <Grid ColumnSpacing="14" RowSpacing="10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
                                         <Border Width="44" Height="44" CornerRadius="12"
                                                 Background="{ThemeResource AccentFillColorTertiaryBrush}">
                                             <FontIcon Glyph="&#xE8EA;" FontSize="21" />
@@ -154,7 +130,7 @@
                                             <TextBlock Text="{Binding Serial}" Opacity="0.62" FontFamily="Consolas"
                                                        TextTrimming="CharacterEllipsis" MaxLines="1" />
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                             <Border Padding="8,3" CornerRadius="8" Background="{ThemeResource ControlFillColorSecondaryBrush}">
                                                 <TextBlock Text="{Binding ConnectionLabel}" />
                                             </Border>
@@ -162,519 +138,580 @@
                                                 <TextBlock Text="{Binding StateLabel}" />
                                             </Border>
                                         </StackPanel>
-                                        <Button Grid.Column="3" Content="{Binding MirrorButtonText}" IsEnabled="{Binding IsOnline}"
-                                                CommandParameter="{Binding Serial}" Click="Mirror_Click"
-                                                Style="{ThemeResource AccentButtonStyle}" VerticalAlignment="Center" />
-                                        <CommandBar Grid.Column="4" Margin="8,0,0,0" Background="Transparent"
-                                                    DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
-                                            <AppBarButton Label="TCP/IP" CommandParameter="{Binding Serial}" Click="EnableTcpIp_Click" />
-                                            <AppBarButton Label="重启" CommandParameter="{Binding Serial}" Click="Reboot_Click" />
-                                            <AppBarButton Label="断开" CommandParameter="{Binding Serial}" Click="Disconnect_Click" />
-                                        </CommandBar>
+                                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                            <Button Content="{Binding MirrorButtonText}" IsEnabled="{Binding IsOnline}"
+                                                    CommandParameter="{Binding Serial}" Click="Mirror_Click"
+                                                    Style="{ThemeResource AccentButtonStyle}" />
+                                            <Button Content="更多" AutomationProperties.Name="设备更多操作"
+                                                    CommandParameter="{Binding Serial}" Click="DeviceMore_Click" />
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
-
                 </Grid>
 
-                <Border Grid.Row="4" Margin="0,14,0,0" Padding="12,8" CornerRadius="10"
-                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-                </Border>
-            </Grid>
-
-            <Grid x:Name="SessionsView" Margin="24,20" MaxWidth="1200" Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="镜像会话" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock Text="查看采集参数、管理录制并排列多个 scrcpy 窗口" Opacity="0.68" />
-                    <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
-                        <AppBarButton Label="宫格排列" Tag="grid" Click="ArrangeWindows_Click" />
-                        <AppBarButton Label="横向排列" Tag="horizontal" Click="ArrangeWindows_Click" />
-                        <AppBarButton Label="纵向排列" Tag="vertical" Click="ArrangeWindows_Click" />
-                    </CommandBar>
-                </StackPanel>
-                <ScrollViewer Grid.Row="1" Margin="0,12,0,10" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="14">
-                <ListView ItemsSource="{Binding Sessions}" MaxHeight="420"
-                          SelectionMode="None" Background="Transparent">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0,0,0,10" />
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="18" CornerRadius="12"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon Glyph="&#xE714;" FontSize="22" VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Spacing="3">
-                                        <TextBlock Text="{Binding DeviceSerial}" FontWeight="SemiBold" FontFamily="Consolas" />
-                                        <TextBlock Text="{Binding StartedAtLabel}" Opacity="0.62" />
-                                        <TextBlock Text="{Binding PerformanceLabel}" Opacity="0.72" TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding RecordingLabel}" Opacity="0.62" />
-                                    </StackPanel>
-                                    <Border Grid.Column="2" Padding="9,4" CornerRadius="9"
-                                            Background="{ThemeResource AccentFillColorTertiaryBrush}" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding StateLabel}" />
-                                    </Border>
-                                    <StackPanel Grid.Column="3" Margin="8,0,0,0" Orientation="Horizontal" Spacing="8">
-                                        <Button Content="{Binding RecordingButtonText}"
-                                                CommandParameter="{Binding DeviceSerial}" Click="ToggleSessionRecording_Click" />
-                                        <Button Content="停止镜像"
-                                                CommandParameter="{Binding DeviceSerial}" Click="StopMirror_Click" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-                    <Border Padding="18" CornerRadius="14"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                        <StackPanel Spacing="10">
-                        <TextBlock Text="录制中心" FontSize="18" FontWeight="SemiBold" />
-                        <TextBlock Text="可在上方运行中的镜像会话直接开始或停止录制。切换时会自动保存窗口位置并快速重启一次镜像，以确保录像文件正常封装。"
-                                   TextWrapping="Wrap" Opacity="0.66" />
-                        <ListView ItemsSource="{Binding Recordings}" MaxHeight="220" SelectionMode="None" Background="Transparent">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Padding="8" ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold"/><TextBlock Text="{Binding Path}" Opacity="0.62" TextTrimming="CharacterEllipsis"/></StackPanel>
-                                        <StackPanel Grid.Column="1" MaxWidth="360" VerticalAlignment="Center"><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/><TextBlock Text="{Binding SizeLabel}" Opacity="0.62"/></StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{Binding DeviceSerial}" VerticalAlignment="Center" FontFamily="Consolas"/>
-                                        <Button Grid.Column="3" Content="打开目录" CommandParameter="{Binding Path}" Click="OpenRecordingDirectory_Click"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                        </StackPanel>
-                    </Border>
-                    </StackPanel>
-                </ScrollViewer>
-                <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
-                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-                </Border>
-            </Grid>
-
-            <Grid x:Name="DiagnosticsView" Margin="24,20" MaxWidth="1200" Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="诊断中心" FontSize="28" FontWeight="SemiBold" />
-                        <TextBlock Text="检查 ADB、scrcpy、mDNS 与潜在版本冲突" Opacity="0.68" />
-                    </StackPanel>
-                    <Button Grid.Column="1" Content="运行诊断" Click="RunDiagnostics_Click"
-                            IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" VerticalAlignment="Center" />
-                </Grid>
-                <ListView Grid.Row="1" Margin="0,22,0,0" ItemsSource="{Binding Diagnostics}"
-                          SelectionMode="None" Background="Transparent">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0,0,0,10" />
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="16" CornerRadius="12"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                <Grid ColumnSpacing="14">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon Glyph="{Binding Glyph}" FontSize="20" VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Spacing="3">
-                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                        <TextBlock Text="{Binding Detail}" Opacity="0.68" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="2" Text="{Binding StateLabel}" FontWeight="SemiBold"
-                                               VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-                <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
-                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-                </Border>
-            </Grid>
-
-            <Grid x:Name="FilesView" Margin="24,20" MaxWidth="1000" Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="文件与 APK" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock Text="安装 Android 应用，或将文件安全推送到设备的 Download 目录" Opacity="0.68" />
-                </StackPanel>
-
-                <ScrollViewer Grid.Row="1" Margin="0,22,0,16" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="14">
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="12">
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="目标设备" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="仅可对已连接且已授权的设备执行操作" Opacity="0.62" />
-                                </StackPanel>
-                                <ComboBox x:Name="TransferDeviceSelector" ItemsSource="{Binding Devices}"
-                                          DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
-                                          SelectedValue="{Binding SelectedTransferDeviceSerial, Mode=TwoWay}"
-                                          PlaceholderText="选择目标设备" HorizontalAlignment="Stretch" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Padding="18" CornerRadius="14" AllowDrop="True"
-                                DragOver="FileDrop_DragOver" Drop="FileDrop_Drop"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="14">
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="本地文件" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="支持多选和拖放；路径包含空格或中文也可安全传输" Opacity="0.62" />
-                                </StackPanel>
-                                 <TextBox Text="{Binding TransferFilePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         PlaceholderText="请选择 APK 或任意本地文件" IsReadOnly="True" />
-                                <ListView ItemsSource="{Binding TransferQueue}" MaxHeight="150" SelectionMode="None"
-                                          Background="Transparent">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid ColumnSpacing="10" Padding="4">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="130" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding SizeLabel}" Opacity="0.62" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
-                                <Grid ColumnSpacing="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <CommandBar Background="Transparent" DefaultLabelPosition="Right"
-                                                IsDynamicOverflowEnabled="True">
-                                        <AppBarButton Label="选择 APK" Click="ChooseApk_Click" IsEnabled="{Binding IsIdle}" />
-                                        <AppBarButton Label="安装 APK" Click="InstallApk_Click" IsEnabled="{Binding IsIdle}" />
-                                        <AppBarButton Label="选择文件" Click="ChooseFile_Click" IsEnabled="{Binding IsIdle}" />
-                                        <AppBarButton Label="推送到 Download" Click="PushFile_Click" IsEnabled="{Binding IsIdle}" />
-                                        <AppBarButton Label="取消传输" Click="CancelTransfer_Click"
-                                                      IsEnabled="{Binding IsTransferRunning}" />
-                                    </CommandBar>
-                                    <ProgressRing Grid.Column="1" Width="22" Height="22" IsActive="{Binding IsBusy}"
-                                                  VerticalAlignment="Center" />
-                                </Grid>
-                                <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
-                                         Title="覆盖规则"
-                                         Message="安装 APK 使用 -r 保留应用数据；同名文件推送时由 ADB 覆盖目标文件。" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-
-                <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
-                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-                </Border>
-            </Grid>
-
-            <Grid x:Name="ToolsView" Margin="24,20" MaxWidth="1000" Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="设备工具" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock Text="查看设备状态、保存截图、导出日志并从设备下载文件" Opacity="0.68" />
-                </StackPanel>
-
-                <ScrollViewer Grid.Row="1" Margin="0,22,0,16" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="14">
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="目标设备" FontSize="17" FontWeight="SemiBold" />
-                                <ComboBox x:Name="ToolsDeviceSelector" ItemsSource="{Binding Devices}"
-                                          DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
-                                          SelectedValue="{Binding SelectedToolsDeviceSerial, Mode=TwoWay}"
-                                          PlaceholderText="选择已连接设备" HorizontalAlignment="Stretch" />
-                                <Grid ColumnSpacing="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <CommandBar Background="Transparent" DefaultLabelPosition="Right"
-                                                IsDynamicOverflowEnabled="True">
-                                        <AppBarButton Label="设备详情" Click="DeviceDetails_Click" IsEnabled="{Binding IsIdle}" />
-                                        <AppBarButton Label="保存截图" Click="SaveScreenshot_Click" IsEnabled="{Binding IsIdle}" />
-                                        <AppBarButton Label="导出 Logcat" Click="ExportLogcat_Click" IsEnabled="{Binding IsIdle}" />
-                                    </CommandBar>
-                                    <ProgressRing Grid.Column="1" Width="22" Height="22" IsActive="{Binding IsBusy}"
-                                                  VerticalAlignment="Center" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="10">
-                                <TextBlock Text="设备快捷控制" FontSize="17" FontWeight="SemiBold" />
-                                <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
-                                    <AppBarButton Label="返回" Tag="4" Click="DeviceKey_Click" />
-                                    <AppBarButton Label="主页" Tag="3" Click="DeviceKey_Click" />
-                                    <AppBarButton Label="最近任务" Tag="187" Click="DeviceKey_Click" />
-                                    <AppBarButton Label="电源" Tag="26" Click="DeviceKey_Click" />
-                                    <AppBarButton Label="音量+" Tag="24" Click="DeviceKey_Click" />
-                                    <AppBarButton Label="音量-" Tag="25" Click="DeviceKey_Click" />
-                                </CommandBar>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="应用管理器" FontSize="17" FontWeight="SemiBold" />
-                                <Grid ColumnSpacing="10">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <ComboBox ItemsSource="{Binding InstalledApps}" DisplayMemberPath="PackageName" SelectedValuePath="PackageName"
-                                              SelectedValue="{Binding SelectedAppPackage, Mode=TwoWay}" PlaceholderText="先读取设备应用" />
-                                    <Button Grid.Column="1" Content="读取用户应用" Click="RefreshApps_Click" />
-                                </Grid>
-                                <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
-                                    <AppBarButton Label="启动" Tag="launch" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
-                                    <AppBarButton Label="强制停止" Tag="stop" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
-                                    <AppBarButton Label="卸载" Tag="uninstall" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
-                                </CommandBar>
-                                <Grid ColumnSpacing="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Header="按包名卸载" Text="{Binding PackageNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             PlaceholderText="例如 com.example.app" />
-                                    <Button Grid.Column="1" Content="卸载指定包名" Click="UninstallPackage_Click"
-                                            IsEnabled="{Binding IsIdle}" VerticalAlignment="Bottom" />
-                                </Grid>
-                                <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="卸载提示"
-                                         Message="可以从列表选择或直接输入包名。卸载会删除该应用及其设备数据，执行前会再次确认。" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="12">
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="ADB Shell（高级）" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="命令只发送到上方选中的 Android 设备，不调用 Windows cmd.exe，也不会保存命令历史。"
-                                               TextWrapping="Wrap" Opacity="0.62" />
-                                </StackPanel>
-                                <TextBox Header="设备命令" Text="{Binding ShellCommand, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         PlaceholderText="例如 getprop ro.product.model" />
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <Button Content="在选中设备执行" Click="RunShellCommand_Click"
-                                            IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
-                                    <Button Content="取消" Click="CancelShellCommand_Click"
-                                            IsEnabled="{Binding IsShellCommandRunning}" />
-                                    <Button Content="清除输出" Click="ClearShellOutput_Click" />
-                                </StackPanel>
-                                <TextBox Text="{Binding ShellOutput}" IsReadOnly="True" AcceptsReturn="True"
-                                         FontFamily="Consolas" MinHeight="160" MaxHeight="300"
-                                         TextWrapping="NoWrap"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                         ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                                <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="高级操作"
-                                         Message="命令由设备端 sh 解释，可能修改或删除设备数据。请确认目标设备和命令内容后再执行。" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="12">
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="从设备下载" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="输入设备上的绝对路径，可下载单个文件或目录" Opacity="0.62" />
-                                </StackPanel>
-                                <TextBox Header="设备路径" Text="{Binding RemoteFilePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         PlaceholderText="/sdcard/Download/example.zip" />
-                                <Grid ColumnSpacing="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Header="保存到本地目录" Text="{Binding LocalDownloadDirectory}"
-                                             IsReadOnly="True" PlaceholderText="请选择本地目录" />
-                                    <Button Grid.Column="1" Content="选择目录" Click="ChooseDownloadDirectory_Click"
-                                            VerticalAlignment="Bottom" />
-                                </Grid>
-                                <Button Content="开始下载" Click="PullRemoteFile_Click"
-                                        IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}"
-                                        HorizontalAlignment="Left" />
-                                <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
-                                         Title="路径说明"
-                                         Message="设备路径必须以 / 开头；下载目录为空时不会执行操作。" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-
-                <Border Grid.Row="2" Padding="12,8" CornerRadius="10"
-                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-                </Border>
-            </Grid>
-
-            <Grid x:Name="AboutView" Margin="24,20" MaxWidth="900" Visibility="Collapsed">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="18">
+                <Grid x:Name="SessionsView" Margin="24,20,24,16" MaxWidth="1200" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="关于 ADB Mirror Studio" FontSize="28" FontWeight="SemiBold" />
-                            <TextBlock Text="Android 设备连接、镜像、文件与诊断工作台" Opacity="0.68" />
+                            <TextBlock Text="镜像与录制" FontSize="28" FontWeight="SemiBold" />
+                            <TextBlock Text="配置质量、管理实时镜像、录制和多个 scrcpy 窗口" Opacity="0.68" />
                         </StackPanel>
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Image Source="ms-appx:///Assets/Square44x44Logo.scale-200.png" Width="48" Height="48"
-                                       VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock Text="ADB Mirror Studio" FontSize="20" FontWeight="SemiBold" />
-                                    <TextBlock><Run Text="版本 "/><Run Text="{Binding AppVersion}" /></TextBlock>
-                                    <TextBlock Text="基于 WinUI 3、Android Debug Bridge 与 scrcpy" Opacity="0.62" />
+                        <CommandBar Grid.Column="1" Background="Transparent" DefaultLabelPosition="Right"
+                                    IsDynamicOverflowEnabled="True">
+                            <AppBarButton Label="宫格" Tag="grid" Click="ArrangeWindows_Click" />
+                            <AppBarButton Label="横向" Tag="horizontal" Click="ArrangeWindows_Click" />
+                            <AppBarButton Label="纵向" Tag="vertical" Click="ArrangeWindows_Click" />
+                        </CommandBar>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="14">
+                            <Border Padding="18" CornerRadius="14"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="镜像质量" FontSize="17" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="MirrorProfileSelector" Header="默认质量预设"
+                                              ItemsSource="{Binding MirrorProfiles}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                              SelectedValue="{Binding SelectedMirrorProfileId, Mode=TwoWay}"
+                                              SelectionChanged="MirrorProfileSelector_SelectionChanged"
+                                              MaxWidth="360" HorizontalAlignment="Left" />
+                                    <Expander Header="启动镜像时同时录制（高级）" IsExpanded="False">
+                                        <StackPanel Padding="0,10,0,0" Spacing="10">
+                                            <TextBox Header="录屏文件" Text="{Binding RecordingPath}" IsReadOnly="True"
+                                                     PlaceholderText="不预先录制；也可在运行会话中开始录制" />
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <Button Content="选择位置" Click="ChooseRecordingPath_Click" />
+                                                <Button Content="清除" Click="ClearRecordingPath_Click" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Expander>
                                 </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="10">
-                                <TextBlock Text="隐私与数据" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="应用不内置遥测或广告 SDK。设置及崩溃日志保存在以下本地目录，可随时查看或删除。"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding DataDirectory}" FontFamily="Consolas" Opacity="0.72" />
-                                <Button Content="打开数据目录" Click="OpenDataDirectory_Click" HorizontalAlignment="Left" />
-                            </StackPanel>
-                        </Border>
-                        <Border Padding="18" CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="10">
-                                <TextBlock Text="免费更新" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="仅访问公开 GitHub Release，不上传设备或用户数据。安装前会校验文件大小和 SHA256。"
-                                           TextWrapping="Wrap" Opacity="0.68" />
-                                <TextBlock Text="{Binding UpdateStatusText}" TextWrapping="Wrap" />
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UpdateDownloadProgress}"
-                                             Height="4" />
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <Button Content="检查更新" Click="CheckUpdates_Click" IsEnabled="{Binding IsIdle}" />
-                                    <Button Content="下载并安装" Click="DownloadAndInstallUpdate_Click"
-                                            IsEnabled="{Binding CanDownloadAndInstallUpdate}"
-                                            Style="{ThemeResource AccentButtonStyle}" />
-                                    <Button Content="取消下载" Click="CancelUpdateDownload_Click"
-                                            IsEnabled="{Binding IsUpdateDownloading}" />
-                                    <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
+                            </Border>
+                            <InfoBar IsOpen="{Binding HasNoSessions}" IsClosable="False" Severity="Informational"
+                                     Title="当前没有镜像会话" Message="请先在设备页连接设备并打开镜像。">
+                                <InfoBar.ActionButton>
+                                    <Button Content="前往设备" Click="OpenDevices_Click" />
+                                </InfoBar.ActionButton>
+                            </InfoBar>
+                            <ListView ItemsSource="{Binding Sessions}" MaxHeight="400" SelectionMode="None"
+                                      Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Margin" Value="0,0,0,10" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="18" CornerRadius="12"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                            <Grid ColumnSpacing="12" RowSpacing="10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <FontIcon Glyph="&#xE714;" FontSize="22" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1" Spacing="3">
+                                                    <TextBlock Text="{Binding DeviceDisplayName}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding DeviceSerial}" Opacity="0.62" FontFamily="Consolas"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding StartedAtLabel}" Opacity="0.62" />
+                                                    <TextBlock Text="{Binding PerformanceLabel}" Opacity="0.72" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding RecordingLabel}" Opacity="0.62" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                                    <Border Padding="9,4" CornerRadius="9" Background="{ThemeResource AccentFillColorTertiaryBrush}">
+                                                        <TextBlock Text="{Binding StateLabel}" />
+                                                    </Border>
+                                                    <Button Content="{Binding RecordingButtonText}"
+                                                            CommandParameter="{Binding DeviceSerial}" Click="ToggleSessionRecording_Click" />
+                                                    <Button Content="停止镜像" CommandParameter="{Binding DeviceSerial}" Click="StopMirror_Click" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <Border Padding="18" CornerRadius="14"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="录制中心" FontSize="18" FontWeight="SemiBold" />
+                                    <TextBlock Text="可从运行中的镜像直接开始或停止录制；切换时会保存窗口位置并快速重启一次镜像。"
+                                               TextWrapping="Wrap" Opacity="0.66" />
+                                    <ListView ItemsSource="{Binding Recordings}" MaxHeight="240" SelectionMode="None"
+                                              Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Padding="8" RowSpacing="6">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding Path}" Opacity="0.62" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+                                                        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding SizeLabel}" Opacity="0.62" />
+                                                        <TextBlock Text="{Binding DeviceSerial}" FontFamily="Consolas" Opacity="0.72" />
+                                                        <Button Content="打开目录" CommandParameter="{Binding Path}"
+                                                                Click="OpenRecordingDirectory_Click" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
                                 </StackPanel>
-                            </StackPanel>
-                        </Border>
-                        <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
-                                 Title="第三方组件"
-                                 Message="ADB 与 scrcpy 使用 Apache-2.0；SDL、FFmpeg、libusb 的许可与归属文件随发布包提供。" />
-                    </StackPanel>
-                </ScrollViewer>
-            </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
 
-            <Grid x:Name="SettingsView" Margin="24,20" MaxWidth="900" Visibility="Collapsed">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="18">
+                <Grid x:Name="FilesView" Margin="24,20,24,16" MaxWidth="1050" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
                     <StackPanel Spacing="4">
-                        <TextBlock Text="设置" FontSize="28" FontWeight="SemiBold" />
-                        <TextBlock Text="外观与设备刷新偏好" Opacity="0.68" />
+                        <TextBlock Text="文件传输" FontSize="28" FontWeight="SemiBold" />
+                        <TextBlock Text="在电脑与目标设备之间上传、下载文件或安装 APK" Opacity="0.68" />
                     </StackPanel>
-                    <Border Padding="18" CornerRadius="14"
+                    <Border Grid.Row="1" Margin="0,18,0,12" Padding="16" CornerRadius="12"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="应用主题" FontSize="17" FontWeight="SemiBold" />
-                            <RadioButtons x:Name="ThemeSelector" SelectedIndex="0" SelectionChanged="ThemeSelector_SelectionChanged">
-                                <x:String>跟随系统</x:String>
-                                <x:String>浅色</x:String>
-                                <x:String>深色</x:String>
-                            </RadioButtons>
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="当前目标设备" FontSize="17" FontWeight="SemiBold" />
+                            <ComboBox x:Name="TransferDeviceSelector" ItemsSource="{Binding Devices}"
+                                      DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
+                                      SelectedValue="{Binding SelectedDeviceSerial, Mode=TwoWay}"
+                                      PlaceholderText="选择已连接设备" HorizontalAlignment="Stretch" />
                         </StackPanel>
                     </Border>
-                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
-                             Title="连接历史"
-                             Message="成功连接过的无线地址仅保存在本机，启动时不会自动重连；请在设备中心手动选择并连接。" />
-                    <Border Padding="18" CornerRadius="14"
+                    <TabView Grid.Row="2" IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
+                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                        <TabViewItem Header="上传文件" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Border Margin="0,8,0,0" Padding="18" CornerRadius="14" AllowDrop="True"
+                                        DragOver="FileDrop_DragOver" Drop="FileDrop_Drop"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="推送到设备 Download 目录" FontSize="17" FontWeight="SemiBold" />
+                                            <TextBlock Text="支持多选和拖放；中文、空格和特殊字符路径会作为独立参数安全传输"
+                                                       TextWrapping="Wrap" Opacity="0.62" />
+                                        </StackPanel>
+                                        <TextBox Text="{Binding TransferFilePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Header="本地文件" PlaceholderText="选择文件或拖放到此区域" IsReadOnly="True" />
+                                        <ListView ItemsSource="{Binding TransferQueue}" MaxHeight="220" SelectionMode="None" Background="Transparent">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Padding="6" ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="130" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding SizeLabel}" Opacity="0.62" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                        <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                            <AppBarButton Label="选择文件" Click="ChooseFile_Click" IsEnabled="{Binding IsIdle}" />
+                                            <AppBarButton Label="推送到 Download" Click="PushFile_Click" IsEnabled="{Binding IsIdle}" />
+                                            <AppBarButton Label="取消传输" Click="CancelTransfer_Click" IsEnabled="{Binding IsTransferRunning}" />
+                                        </CommandBar>
+                                        <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                                                 Title="覆盖规则" Message="目标目录中存在同名文件时，ADB 会覆盖该文件。" />
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="从设备下载" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Border Margin="0,8,0,0" Padding="18" CornerRadius="14"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="从设备下载" FontSize="17" FontWeight="SemiBold" />
+                                            <TextBlock Text="输入设备上的绝对路径，可下载单个文件或目录" Opacity="0.62" />
+                                        </StackPanel>
+                                        <TextBox Header="设备路径" Text="{Binding RemoteFilePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 PlaceholderText="/sdcard/Download/example.zip" />
+                                        <TextBox Header="保存到本地目录" Text="{Binding LocalDownloadDirectory}"
+                                                 IsReadOnly="True" PlaceholderText="请选择本地目录" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <Button Content="选择目录" Click="ChooseDownloadDirectory_Click" />
+                                            <Button Content="开始下载" Click="PullRemoteFile_Click" IsEnabled="{Binding IsIdle}"
+                                                    Style="{ThemeResource AccentButtonStyle}" />
+                                        </StackPanel>
+                                        <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                                                 Title="路径说明" Message="设备路径必须以 / 开头；下载目录为空时不会执行操作。" />
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="安装 APK" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Border Margin="0,8,0,0" Padding="18" CornerRadius="14"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="安装 Android 应用" FontSize="17" FontWeight="SemiBold" />
+                                            <TextBlock Text="使用 adb install -r 覆盖安装并保留已有应用数据" Opacity="0.62" />
+                                        </StackPanel>
+                                        <TextBox Header="APK 文件" Text="{Binding TransferFilePath}" IsReadOnly="True"
+                                                 PlaceholderText="请选择 .apk 文件" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <Button Content="选择 APK" Click="ChooseApk_Click" IsEnabled="{Binding IsIdle}" />
+                                            <Button Content="安装 APK" Click="InstallApk_Click" IsEnabled="{Binding IsIdle}"
+                                                    Style="{ThemeResource AccentButtonStyle}" />
+                                        </StackPanel>
+                                        <InfoBar IsOpen="True" IsClosable="False" Severity="Warning"
+                                                 Title="安装安全" Message="安装前请确认 APK 来源和发布者；设备可能要求额外确认安装权限。" />
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
+                        </TabViewItem>
+                    </TabView>
+                </Grid>
+
+                <Grid x:Name="ToolsView" Margin="24,20,24,16" MaxWidth="1050" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="设备工具" FontSize="28" FontWeight="SemiBold" />
+                        <TextBlock Text="对当前设备执行常用控制、应用管理和高级命令" Opacity="0.68" />
+                    </StackPanel>
+                    <Border Grid.Row="1" Margin="0,18,0,12" Padding="16" CornerRadius="12"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                        <Grid ColumnSpacing="18">
+                        <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="自动刷新设备" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="每 5 秒更新设备状态；执行安装、传输或诊断时会自动避让" Opacity="0.62" />
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="当前目标设备" FontSize="17" FontWeight="SemiBold" />
+                                <ComboBox x:Name="ToolsDeviceSelector" ItemsSource="{Binding Devices}"
+                                          DisplayMemberPath="DisplayName" SelectedValuePath="Serial"
+                                          SelectedValue="{Binding SelectedDeviceSerial, Mode=TwoWay}"
+                                          PlaceholderText="选择已连接设备" HorizontalAlignment="Stretch" />
                             </StackPanel>
-                            <ToggleSwitch x:Name="AutoRefreshToggle" Grid.Column="1"
-                                          OnContent="开启" OffContent="关闭"
-                                          Toggled="AutoRefreshToggle_Toggled" VerticalAlignment="Center" />
+                            <ProgressRing Grid.Column="1" Width="22" Height="22" IsActive="{Binding IsBusy}"
+                                          VerticalAlignment="Center" />
                         </Grid>
                     </Border>
-                    <TextBlock Text="设置保存在本机，重新安装便携包不会覆盖已有偏好。" Opacity="0.62" />
-                </StackPanel>
-                </ScrollViewer>
+                    <TabView x:Name="ToolsTabs" Grid.Row="2" IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
+                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                        <TabViewItem Header="常用" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="0,8,0,0" Spacing="14">
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="设备信息与导出" FontSize="17" FontWeight="SemiBold" />
+                                            <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                                <AppBarButton Label="设备详情" Click="DeviceDetails_Click" IsEnabled="{Binding IsIdle}" />
+                                                <AppBarButton Label="保存截图" Click="SaveScreenshot_Click" IsEnabled="{Binding IsIdle}" />
+                                                <AppBarButton Label="导出 Logcat" Click="ExportLogcat_Click" IsEnabled="{Binding IsIdle}" />
+                                            </CommandBar>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="设备快捷控制" FontSize="17" FontWeight="SemiBold" />
+                                            <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                                <AppBarButton Label="返回" Tag="4" Click="DeviceKey_Click" />
+                                                <AppBarButton Label="主页" Tag="3" Click="DeviceKey_Click" />
+                                                <AppBarButton Label="最近任务" Tag="187" Click="DeviceKey_Click" />
+                                                <AppBarButton Label="电源" Tag="26" Click="DeviceKey_Click" />
+                                                <AppBarButton Label="音量+" Tag="24" Click="DeviceKey_Click" />
+                                                <AppBarButton Label="音量-" Tag="25" Click="DeviceKey_Click" />
+                                            </CommandBar>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="应用管理" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Border Margin="0,8,0,0" Padding="18" CornerRadius="14"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="应用管理器" FontSize="17" FontWeight="SemiBold" />
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox ItemsSource="{Binding InstalledApps}" DisplayMemberPath="PackageName"
+                                                      SelectedValuePath="PackageName" SelectedValue="{Binding SelectedAppPackage, Mode=TwoWay}"
+                                                      PlaceholderText="先读取设备应用" />
+                                            <Button Grid.Column="1" Content="读取用户应用" Click="RefreshApps_Click" />
+                                        </Grid>
+                                        <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                            <AppBarButton Label="启动" Tag="launch" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
+                                            <AppBarButton Label="强制停止" Tag="stop" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
+                                            <AppBarButton Label="卸载" Tag="uninstall" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
+                                        </CommandBar>
+                                        <TextBox Header="按包名卸载" Text="{Binding PackageNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 PlaceholderText="例如 com.example.app" />
+                                        <Button Content="卸载指定包名" Click="UninstallPackage_Click" IsEnabled="{Binding IsIdle}"
+                                                HorizontalAlignment="Left" />
+                                        <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="卸载提示"
+                                                 Message="卸载会删除应用及其设备数据，执行前会再次显示目标设备并要求确认。" />
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="高级" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Border Margin="0,8,0,0" Padding="18" CornerRadius="14"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="ADB Shell（高级）" FontSize="17" FontWeight="SemiBold" />
+                                            <TextBlock Text="命令只发送到当前目标 Android 设备，不调用 Windows cmd.exe，也不会保存命令历史。"
+                                                       TextWrapping="Wrap" Opacity="0.62" />
+                                        </StackPanel>
+                                        <TextBox Header="设备命令" Text="{Binding ShellCommand, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 PlaceholderText="例如 getprop ro.product.model" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <Button Content="在当前设备执行" Click="RunShellCommand_Click"
+                                                    IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
+                                            <Button Content="取消" Click="CancelShellCommand_Click" IsEnabled="{Binding IsShellCommandRunning}" />
+                                            <Button Content="清除输出" Click="ClearShellOutput_Click" />
+                                        </StackPanel>
+                                        <TextBox Text="{Binding ShellOutput}" IsReadOnly="True" AcceptsReturn="True"
+                                                 FontFamily="Consolas" MinHeight="180" MaxHeight="340" TextWrapping="NoWrap"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                        <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="高级操作"
+                                                 Message="命令由设备端 sh 解释，可能修改或删除设备数据。请确认目标设备和命令内容后再执行。" />
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
+                        </TabViewItem>
+                    </TabView>
+                </Grid>
+
+                <Grid x:Name="SettingsView" Margin="24,20,24,16" MaxWidth="950" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="设置" FontSize="28" FontWeight="SemiBold" />
+                        <TextBlock Text="管理外观、诊断、更新和本地数据" Opacity="0.68" />
+                    </StackPanel>
+                    <TabView x:Name="SettingsTabs" Grid.Row="1" Margin="0,16,0,0"
+                             IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
+                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                             SelectionChanged="SettingsTabs_SelectionChanged">
+                        <TabViewItem Header="外观与常规" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="0,8,0,0" Spacing="14">
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="应用主题" FontSize="17" FontWeight="SemiBold" />
+                                            <RadioButtons x:Name="ThemeSelector" SelectedIndex="0"
+                                                          SelectionChanged="ThemeSelector_SelectionChanged">
+                                                <x:String>跟随系统</x:String>
+                                                <x:String>浅色</x:String>
+                                                <x:String>深色</x:String>
+                                            </RadioButtons>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <Grid ColumnSpacing="18">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="自动刷新设备" FontSize="17" FontWeight="SemiBold" />
+                                                <TextBlock Text="每 5 秒更新设备状态；执行任务时会自动避让" Opacity="0.62" />
+                                            </StackPanel>
+                                            <ToggleSwitch x:Name="AutoRefreshToggle" Grid.Column="1"
+                                                          OnContent="开启" OffContent="关闭"
+                                                          Toggled="AutoRefreshToggle_Toggled" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                                             Title="连接历史" Message="成功连接过的无线地址仅保存在本机，启动时不会自动重连。" />
+                                    <TextBlock Text="设置保存在本机，重新安装便携包不会覆盖已有偏好。" Opacity="0.62" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="诊断" IsClosable="False">
+                            <Grid Margin="0,8,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="环境诊断" FontSize="17" FontWeight="SemiBold" />
+                                        <TextBlock Text="检查 ADB、scrcpy、mDNS 与潜在版本冲突" Opacity="0.62" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="运行诊断" Click="RunDiagnostics_Click"
+                                            IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
+                                </Grid>
+                                <ListView Grid.Row="1" Margin="0,14,0,0" ItemsSource="{Binding Diagnostics}"
+                                          SelectionMode="None" Background="Transparent">
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Margin" Value="0,0,0,10" />
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="16" CornerRadius="12"
+                                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                <Grid ColumnSpacing="14">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <FontIcon Glyph="{Binding Glyph}" FontSize="20" />
+                                                    <StackPanel Grid.Column="1" Spacing="3">
+                                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Opacity="0.68" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding StateLabel}" VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </Grid>
+                        </TabViewItem>
+                        <TabViewItem Header="更新与数据" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="0,8,0,0" Spacing="14">
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="免费更新" FontSize="17" FontWeight="SemiBold" />
+                                            <TextBlock Text="仅访问公开 GitHub Release，不上传设备或用户数据；安装前校验文件大小和 SHA256。"
+                                                       TextWrapping="Wrap" Opacity="0.68" />
+                                            <TextBlock Text="{Binding UpdateStatusText}" TextWrapping="Wrap" />
+                                            <ProgressBar Minimum="0" Maximum="100" Value="{Binding UpdateDownloadProgress}" Height="4" />
+                                            <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                                <AppBarButton Label="检查更新" Click="CheckUpdates_Click" IsEnabled="{Binding IsIdle}" />
+                                                <AppBarButton Label="下载并安装" Click="DownloadAndInstallUpdate_Click"
+                                                              IsEnabled="{Binding CanDownloadAndInstallUpdate}" />
+                                                <AppBarButton Label="取消下载" Click="CancelUpdateDownload_Click"
+                                                              IsEnabled="{Binding IsUpdateDownloading}" />
+                                            </CommandBar>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="隐私与本地数据" FontSize="17" FontWeight="SemiBold" />
+                                            <TextBlock Text="应用不内置遥测或广告 SDK。设置及崩溃日志保存在以下本地目录。"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding DataDirectory}" FontFamily="Consolas" Opacity="0.72" TextWrapping="Wrap" />
+                                            <Button Content="打开数据目录" Click="OpenDataDirectory_Click" HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="关于与许可" IsClosable="False">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="0,8,0,0" Spacing="14">
+                                    <Border Padding="18" CornerRadius="14"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Image Source="ms-appx:///Assets/Square44x44Logo.scale-200.png" Width="48" Height="48"
+                                                   VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Text="ADB Mirror Studio" FontSize="20" FontWeight="SemiBold" />
+                                                <TextBlock><Run Text="版本 "/><Run Text="{Binding AppVersion}" /></TextBlock>
+                                                <TextBlock Text="Android 设备连接、镜像、录制、文件和诊断工作台" Opacity="0.62" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                                             Title="全部功能永久免费"
+                                             Message="无账户、无试用、无订阅、无激活，也不包含商业功能分级。" />
+                                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational" Title="第三方组件"
+                                             Message="ADB 与 scrcpy 使用 Apache-2.0；SDL、FFmpeg、libusb 的许可与归属文件随发布包提供。" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabViewItem>
+                    </TabView>
+                </Grid>
             </Grid>
-        </Grid>
-    </NavigationView>
+        </NavigationView>
+
+        <InfoBar Grid.Row="1" Margin="12,6,12,10" IsOpen="True" IsClosable="False"
+                 Severity="{Binding StatusSeverity}" Title="状态" Message="{Binding StatusText}"
+                 AutomationProperties.LiveSetting="Polite">
+            <InfoBar.ActionButton>
+                <Button Content="处理">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="复制状态" Click="CopyStatus_Click" />
+                            <MenuFlyoutItem Text="打开诊断" Click="OpenDiagnostics_Click" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </InfoBar.ActionButton>
+        </InfoBar>
+    </Grid>
 </Page>

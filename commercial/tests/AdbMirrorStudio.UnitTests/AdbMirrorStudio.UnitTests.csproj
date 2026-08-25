@@ -1,5 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -24,4 +23,12 @@
     <ProjectReference Include="..\..\src\AdbMirrorStudio.Infrastructure\AdbMirrorStudio.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\src\AdbMirrorStudio.App\MainPage.xaml"
+          Link="Fixtures\MainPage.xaml"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\AdbMirrorStudio.App\MainPage.xaml.cs"
+          Link="Fixtures\MainPage.xaml.cs"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

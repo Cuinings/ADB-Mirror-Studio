@@ -8,11 +8,11 @@
 
 ## 下载
 
-当前版本：`V1.2.0`
+当前版本：`V1.3.0`
 
-- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.2.0)
-- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.2.0/ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe)
-- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.2.0/AdbMirrorStudio-V1.2.0-win-x64.zip)
+- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.3.0)
+- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.3.0/ADB-Mirror-Studio-Setup-V1.3.0-win-x64.exe)
+- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.3.0/AdbMirrorStudio-V1.3.0-win-x64.zip)
 
 SHA256：
 
@@ -56,7 +56,7 @@ SHA256：
 
 ### 安装版
 
-1. 下载 `ADB-Mirror-Studio-Setup-V1.2.0-win-x64.exe`。
+1. 下载 `ADB-Mirror-Studio-Setup-V1.3.0-win-x64.exe`。
 2. 核对上方 SHA256 后运行安装程序。
 3. 从开始菜单打开 ADB Mirror Studio。
 
@@ -64,7 +64,7 @@ SHA256：
 
 ### 便携版
 
-1. 下载 `AdbMirrorStudio-V1.2.0-win-x64.zip`。
+1. 下载 `AdbMirrorStudio-V1.3.0-win-x64.zip`。
 2. 完整解压 ZIP，不要直接在压缩包中运行。
 3. 双击 `AdbMirrorStudio.App.exe`。
 
@@ -77,7 +77,7 @@ SHA256：
 1. 在手机中开启“开发者选项”和“USB 调试”。
 2. 使用支持数据传输的 USB 线连接电脑。
 3. 在手机端允许 USB 调试授权。
-4. 在应用的“设备中心”刷新设备并打开镜像。
+4. 在应用的“设备”页刷新设备并打开镜像。
 
 ### Android 11+ 无线配对
 
@@ -90,7 +90,7 @@ SHA256：
 
 ## 应用内更新
 
-检查到后续新版本时，“关于 → 免费更新”会提供“下载并安装”：
+检查到后续新版本时，“设置 → 更新与数据”会提供“下载并安装”：
 
 1. 只接受固定 GitHub 仓库的 HTTPS Windows x64 安装包。
 2. 安装包名称必须与目标版本一致。
@@ -154,6 +154,7 @@ SHA256：
 - [完整使用、开发和发布手册](commercial/README.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
 - [V1.1.0 发行说明](commercial/RELEASE-NOTES-V1.1.0.md)
+- [V1.3.0 发行说明](commercial/RELEASE-NOTES-V1.3.0.md)
 - [V1.2.0 发行说明](commercial/RELEASE-NOTES-V1.2.0.md)
 - [版本管理规则](commercial/VERSIONING.md)
 - [隐私说明](commercial/PRIVACY.md)

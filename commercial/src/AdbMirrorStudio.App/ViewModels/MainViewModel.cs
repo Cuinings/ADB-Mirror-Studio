@@ -11,6 +11,7 @@ using AdbMirrorStudio.Domain.Devices;
 using AdbMirrorStudio.Domain.Mirroring;
 using AdbMirrorStudio.Domain.Settings;
 using AdbMirrorStudio.Infrastructure.Adb;
+using Microsoft.UI.Xaml.Controls;
 
 namespace AdbMirrorStudio.App.ViewModels;
 
@@ -45,8 +46,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private AppUpdateInfo? _availableUpdate;
     private string _remoteFilePath = "/sdcard/Download/";
     private string _localDownloadDirectory = string.Empty;
-    private string? _selectedTransferDeviceSerial;
-    private string? _selectedToolsDeviceSerial;
+    private string? _selectedDeviceSerial;
     private string? _selectedAppPackage;
     private string _packageNameInput = string.Empty;
     private string _shellCommand = string.Empty;
@@ -96,8 +96,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string StatusText
     {
         get => _statusText;
-        private set => SetField(ref _statusText, value);
+        private set
+        {
+            if (SetField(ref _statusText, value)) OnPropertyChanged(nameof(StatusSeverity));
+        }
     }
+
+    public InfoBarSeverity StatusSeverity => GetStatusSeverity(StatusText);
 
     public string Endpoint
     {
@@ -141,6 +146,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsRecordingEnabled => !string.IsNullOrWhiteSpace(RecordingPath);
 
     public string OnlineSummary => $"{Devices.Count(device => device.State == DeviceState.Online)} 台在线";
+    public bool HasNoSessions => Sessions.Count == 0;
     public string Theme => _settings.Theme;
     public bool AutoRefresh => _settings.AutoRefresh;
     public bool HasRememberedEndpoints => RememberedEndpoints.Count > 0;
@@ -193,16 +199,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         get => _localDownloadDirectory;
         set => SetField(ref _localDownloadDirectory, value);
     }
-    public string? SelectedTransferDeviceSerial
+    public string? SelectedDeviceSerial
     {
-        get => _selectedTransferDeviceSerial;
-        set => SetField(ref _selectedTransferDeviceSerial, value);
+        get => _selectedDeviceSerial;
+        set
+        {
+            if (!SetField(ref _selectedDeviceSerial, value)) return;
+            InstalledApps.Clear();
+            SelectedAppPackage = null;
+            OnPropertyChanged(nameof(SelectedDeviceLabel));
+        }
     }
-    public string? SelectedToolsDeviceSerial
-    {
-        get => _selectedToolsDeviceSerial;
-        set => SetField(ref _selectedToolsDeviceSerial, value);
-    }
+    public string SelectedDeviceLabel => GetDeviceLabel(SelectedDeviceSerial);
     public string? SelectedAppPackage
     {
         get => _selectedAppPackage;
@@ -227,6 +235,50 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _isShellCommandRunning;
         private set => SetField(ref _isShellCommandRunning, value);
+    }
+
+    public string GetDeviceLabel(string? serial)
+    {
+        if (string.IsNullOrWhiteSpace(serial)) return "未选择设备";
+        var displayName = Devices.FirstOrDefault(device =>
+            string.Equals(device.Serial, serial, StringComparison.Ordinal))?.DisplayName;
+        return string.IsNullOrWhiteSpace(displayName) || string.Equals(displayName, serial, StringComparison.Ordinal)
+            ? serial
+            : $"{displayName}（{serial}）";
+    }
+
+    private static InfoBarSeverity GetStatusSeverity(string status)
+    {
+        if (status.Contains("没有错误", StringComparison.Ordinal))
+        {
+            return InfoBarSeverity.Success;
+        }
+
+        if (status.Contains("失败", StringComparison.Ordinal)
+            || status.Contains("异常", StringComparison.Ordinal)
+            || status.Contains("错误", StringComparison.Ordinal)
+            || status.Contains("无法", StringComparison.Ordinal))
+        {
+            return InfoBarSeverity.Error;
+        }
+
+        if (status.Contains("取消", StringComparison.Ordinal)
+            || status.Contains("请选择", StringComparison.Ordinal)
+            || status.Contains("未发现", StringComparison.Ordinal)
+            || status.Contains("暂时", StringComparison.Ordinal)
+            || status.Contains("没有可", StringComparison.Ordinal))
+        {
+            return InfoBarSeverity.Warning;
+        }
+
+        if (status.Contains("完成", StringComparison.Ordinal)
+            || status.StartsWith("已", StringComparison.Ordinal)
+            || status.Contains("正常", StringComparison.Ordinal))
+        {
+            return InfoBarSeverity.Success;
+        }
+
+        return InfoBarSeverity.Informational;
     }
 
     public async Task InitializeAsync()
@@ -561,8 +613,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 .OrderByDescending(session => session.StartedAt)
                 .ToArray();
             var running = activeSessions.Select(session => session.DeviceSerial).ToHashSet(StringComparer.Ordinal);
-            var selectedTransfer = SelectedTransferDeviceSerial;
-            var selectedTools = SelectedToolsDeviceSerial;
+            var selectedDevice = SelectedDeviceSerial;
             Devices.Clear();
             foreach (var device in snapshot.Devices)
             {
@@ -572,8 +623,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             Sessions.Clear();
             foreach (var session in activeSessions.Where(session => session.State is MirrorSessionState.Starting or MirrorSessionState.Running or MirrorSessionState.Stopping))
             {
-                Sessions.Add(new MirrorSessionCardViewModel(session));
+                var displayName = Devices.FirstOrDefault(device => device.Serial == session.DeviceSerial)?.DisplayName;
+                Sessions.Add(new MirrorSessionCardViewModel(session, displayName));
             }
+            OnPropertyChanged(nameof(HasNoSessions));
 
             foreach (var recordingSession in activeSessions.Where(session => !string.IsNullOrWhiteSpace(session.RecordPath)))
             {
@@ -588,17 +641,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 }
             }
 
-            var onlineSerials = snapshot.Devices
-                .Where(device => device.State == DeviceState.Online)
-                .Select(device => device.Serial)
-                .ToHashSet(StringComparer.Ordinal);
-            var fallbackSerial = snapshot.Devices.FirstOrDefault(device => device.State == DeviceState.Online)?.Serial;
-            SelectedTransferDeviceSerial = selectedTransfer is not null && onlineSerials.Contains(selectedTransfer)
-                ? selectedTransfer
-                : fallbackSerial;
-            SelectedToolsDeviceSerial = selectedTools is not null && onlineSerials.Contains(selectedTools)
-                ? selectedTools
-                : fallbackSerial;
+            SelectedDeviceSerial = DeviceTargetSelection.Resolve(selectedDevice, snapshot.Devices);
+            OnPropertyChanged(nameof(SelectedDeviceLabel));
 
             StatusText = snapshot.Devices.Count == 0
                 ? "未发现设备，可通过 USB 或无线地址连接"
@@ -984,14 +1028,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task SendDeviceKeyAsync(int keyCode)
     {
-        if (string.IsNullOrWhiteSpace(SelectedToolsDeviceSerial))
+        var serial = SelectedDeviceSerial;
+        if (string.IsNullOrWhiteSpace(serial))
         {
             StatusText = "请选择一台目标设备";
             return;
         }
         try
         {
-            await _adb.SendKeyEventAsync(SelectedToolsDeviceSerial, keyCode);
+            await _adb.SendKeyEventAsync(serial, keyCode);
             StatusText = "设备控制指令已发送";
         }
         catch (Exception exception)
@@ -1002,7 +1047,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task RefreshInstalledAppsAsync(bool includeSystemApps)
     {
-        if (string.IsNullOrWhiteSpace(SelectedToolsDeviceSerial))
+        var serial = SelectedDeviceSerial;
+        if (string.IsNullOrWhiteSpace(serial))
         {
             StatusText = "请选择一台目标设备";
             return;
@@ -1010,7 +1056,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         EnterBusy();
         try
         {
-            var apps = await _adb.GetInstalledAppsAsync(SelectedToolsDeviceSerial, includeSystemApps);
+            var apps = await _adb.GetInstalledAppsAsync(serial, includeSystemApps);
+            if (!string.Equals(serial, SelectedDeviceSerial, StringComparison.Ordinal))
+            {
+                StatusText = $"{serial} 的应用列表读取完成；当前目标设备已切换，结果未显示";
+                return;
+            }
             InstalledApps.Clear();
             foreach (var app in apps) InstalledApps.Add(new InstalledAppViewModel(app));
             SelectedAppPackage = InstalledApps.FirstOrDefault()?.PackageName;
@@ -1028,7 +1079,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task RunAppActionAsync(string action)
     {
-        if (string.IsNullOrWhiteSpace(SelectedToolsDeviceSerial) || string.IsNullOrWhiteSpace(SelectedAppPackage))
+        var serial = SelectedDeviceSerial;
+        var packageName = SelectedAppPackage;
+        if (string.IsNullOrWhiteSpace(serial) || string.IsNullOrWhiteSpace(packageName))
         {
             StatusText = "请选择设备和应用";
             return;
@@ -1038,13 +1091,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             switch (action)
             {
-                case "launch": await _adb.LaunchAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
-                case "stop": await _adb.ForceStopAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
-                case "uninstall": await _adb.UninstallAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
+                case "launch": await _adb.LaunchAppAsync(serial, packageName); break;
+                case "stop": await _adb.ForceStopAppAsync(serial, packageName); break;
+                case "uninstall": await _adb.UninstallAppAsync(serial, packageName); break;
                 default: throw new ArgumentOutOfRangeException(nameof(action));
             }
-            if (action == "uninstall") await RefreshInstalledAppsAsync(includeSystemApps: false);
-            StatusText = $"应用操作已完成：{SelectedAppPackage}";
+            if (action == "uninstall" && string.Equals(serial, SelectedDeviceSerial, StringComparison.Ordinal))
+            {
+                await RefreshInstalledAppsAsync(includeSystemApps: false);
+            }
+            StatusText = $"已在 {serial} 完成应用操作：{packageName}";
         }
         catch (Exception exception)
         {
@@ -1058,7 +1114,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task UninstallPackageByNameAsync()
     {
-        var serial = SelectedToolsDeviceSerial;
+        var serial = SelectedDeviceSerial;
         var packageName = PackageNameInput.Trim();
         if (string.IsNullOrWhiteSpace(serial))
         {
@@ -1091,7 +1147,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task RunDeviceShellCommandAsync()
     {
-        var serial = SelectedToolsDeviceSerial;
+        var serial = SelectedDeviceSerial;
         var command = ShellCommand.Trim();
         if (string.IsNullOrWhiteSpace(serial))
         {
@@ -1264,7 +1320,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             {
                 if (card is not null) card.IsMirroring = session.State == MirrorSessionState.Running;
                 if (existing is not null) Sessions.Remove(existing);
-                if (isActiveState) Sessions.Add(new MirrorSessionCardViewModel(session));
+                if (isActiveState) Sessions.Add(new MirrorSessionCardViewModel(session, card?.DisplayName));
+                OnPropertyChanged(nameof(HasNoSessions));
             }
             if (!string.IsNullOrWhiteSpace(session.RecordPath))
             {
@@ -1333,9 +1390,10 @@ public sealed class DeviceCardViewModel(DeviceInfo device, bool isMirroring) : I
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed record MirrorSessionCardViewModel(MirrorSession Session)
+public sealed record MirrorSessionCardViewModel(MirrorSession Session, string? DisplayName = null)
 {
     public string DeviceSerial => Session.DeviceSerial;
+    public string DeviceDisplayName => string.IsNullOrWhiteSpace(DisplayName) ? DeviceSerial : DisplayName;
     public string StateLabel => Session.State switch
     {
         MirrorSessionState.Starting => "正在启动",

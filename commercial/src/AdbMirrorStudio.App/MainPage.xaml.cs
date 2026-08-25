@@ -110,14 +110,34 @@ public sealed partial class MainPage : Page
         await ViewModel.DisconnectAsync(serial);
     }
 
+    private void DeviceMore_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || GetCommandSerial(button) is not { } serial) return;
+
+        var enableTcpIp = new MenuFlyoutItem { Text = "启用 TCP/IP", Tag = serial };
+        enableTcpIp.Click += EnableTcpIp_Click;
+        var reboot = new MenuFlyoutItem { Text = "重启设备", Tag = serial };
+        reboot.Click += Reboot_Click;
+        var disconnect = new MenuFlyoutItem { Text = "断开连接", Tag = serial };
+        disconnect.Click += Disconnect_Click;
+
+        var menu = new MenuFlyout();
+        menu.Items.Add(enableTcpIp);
+        menu.Items.Add(reboot);
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(disconnect);
+        menu.ShowAt(button);
+    }
+
     private async void Reboot_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
+        var target = ViewModel.GetDeviceLabel(serial);
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
             Title = "确认重启设备",
-            Content = $"设备 {serial} 将立即重新启动，当前镜像和传输会中断。",
+            Content = $"设备 {target} 将立即重新启动，当前镜像和传输会中断。",
             PrimaryButtonText = "重启",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close
@@ -185,6 +205,7 @@ public sealed partial class MainPage : Page
     private static string? GetCommandSerial(object sender) => sender switch
     {
         Button { CommandParameter: string serial } => serial,
+        FrameworkElement { Tag: string serial } => serial,
         _ => null
     };
 
@@ -197,15 +218,18 @@ public sealed partial class MainPage : Page
     {
         DeviceCenterView.Visibility = Visibility.Collapsed;
         SessionsView.Visibility = Visibility.Collapsed;
-        DiagnosticsView.Visibility = Visibility.Collapsed;
         FilesView.Visibility = Visibility.Collapsed;
         ToolsView.Visibility = Visibility.Collapsed;
-        AboutView.Visibility = Visibility.Collapsed;
         SettingsView.Visibility = Visibility.Collapsed;
 
         if (args.IsSettingsSelected)
         {
             SettingsView.Visibility = Visibility.Visible;
+            SettingsTabs?.Focus(FocusState.Programmatic);
+            if (SettingsTabs?.SelectedIndex == 1 && ViewModel is not null && ViewModel.Diagnostics.Count == 0)
+            {
+                await ViewModel.RunDiagnosticsAsync();
+            }
             return;
         }
 
@@ -214,13 +238,7 @@ public sealed partial class MainPage : Page
         {
             case "sessions":
                 SessionsView.Visibility = Visibility.Visible;
-                break;
-            case "diagnostics":
-                DiagnosticsView.Visibility = Visibility.Visible;
-                if (ViewModel is not null && ViewModel.Diagnostics.Count == 0)
-                {
-                    await ViewModel.RunDiagnosticsAsync();
-                }
+                MirrorProfileSelector?.Focus(FocusState.Programmatic);
                 break;
             case "files":
                 FilesView.Visibility = Visibility.Visible;
@@ -228,6 +246,7 @@ public sealed partial class MainPage : Page
                 {
                     TransferDeviceSelector.SelectedIndex = 0;
                 }
+                TransferDeviceSelector?.Focus(FocusState.Programmatic);
                 break;
             case "tools":
                 ToolsView.Visibility = Visibility.Visible;
@@ -235,13 +254,47 @@ public sealed partial class MainPage : Page
                 {
                     ToolsDeviceSelector.SelectedIndex = 0;
                 }
-                break;
-            case "about":
-                AboutView.Visibility = Visibility.Visible;
+                ToolsDeviceSelector?.Focus(FocusState.Programmatic);
                 break;
             default:
                 DeviceCenterView.Visibility = Visibility.Visible;
+                RefreshDevicesButton?.Focus(FocusState.Programmatic);
                 break;
+        }
+    }
+
+    private void OpenDevices_Click(object sender, RoutedEventArgs e)
+    {
+        Navigation.SelectedItem = DevicesNavigationItem;
+        DeviceCenterView.Visibility = Visibility.Visible;
+        SessionsView.Visibility = Visibility.Collapsed;
+        FilesView.Visibility = Visibility.Collapsed;
+        ToolsView.Visibility = Visibility.Collapsed;
+        SettingsView.Visibility = Visibility.Collapsed;
+        RefreshDevicesButton?.Focus(FocusState.Programmatic);
+    }
+
+    private async void OpenDiagnostics_Click(object sender, RoutedEventArgs e)
+    {
+        Navigation.SelectedItem = Navigation.SettingsItem;
+        DeviceCenterView.Visibility = Visibility.Collapsed;
+        SessionsView.Visibility = Visibility.Collapsed;
+        FilesView.Visibility = Visibility.Collapsed;
+        ToolsView.Visibility = Visibility.Collapsed;
+        SettingsView.Visibility = Visibility.Visible;
+        SettingsTabs.SelectedIndex = 1;
+        SettingsTabs?.Focus(FocusState.Programmatic);
+        if (ViewModel is not null && ViewModel.Diagnostics.Count == 0)
+        {
+            await ViewModel.RunDiagnosticsAsync();
+        }
+    }
+
+    private async void SettingsTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ViewModel is not null && SettingsTabs.SelectedIndex == 1 && ViewModel.Diagnostics.Count == 0)
+        {
+            await ViewModel.RunDiagnosticsAsync();
         }
     }
 
@@ -273,12 +326,12 @@ public sealed partial class MainPage : Page
 
     private async void InstallApk_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null) await ViewModel.InstallApkAsync(ViewModel.SelectedTransferDeviceSerial);
+        if (ViewModel is not null) await ViewModel.InstallApkAsync(ViewModel.SelectedDeviceSerial);
     }
 
     private async void PushFile_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null) await ViewModel.PushFileAsync(ViewModel.SelectedTransferDeviceSerial);
+        if (ViewModel is not null) await ViewModel.PushFileAsync(ViewModel.SelectedDeviceSerial);
     }
 
     private void CancelTransfer_Click(object sender, RoutedEventArgs e) => ViewModel?.CancelTransfer();
@@ -286,7 +339,7 @@ public sealed partial class MainPage : Page
     private async void DeviceDetails_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is null) return;
-        var details = await ViewModel.GetDeviceDetailsAsync(ViewModel.SelectedToolsDeviceSerial);
+        var details = await ViewModel.GetDeviceDetailsAsync(ViewModel.SelectedDeviceSerial);
         if (details is null) return;
 
         var battery = details.BatteryLevel is null
@@ -327,11 +380,12 @@ public sealed partial class MainPage : Page
         if (ViewModel is null || sender is not FrameworkElement { Tag: string action }) return;
         if (action == "uninstall")
         {
+            var target = ViewModel.GetDeviceLabel(ViewModel.SelectedDeviceSerial);
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
                 Title = "确认卸载应用",
-                Content = $"将卸载 {ViewModel.SelectedAppPackage} 并删除其应用数据。",
+                Content = $"将从设备 {target} 卸载 {ViewModel.SelectedAppPackage} 并删除其应用数据。",
                 PrimaryButtonText = "卸载",
                 CloseButtonText = "取消",
                 DefaultButton = ContentDialogButton.Close
@@ -345,7 +399,7 @@ public sealed partial class MainPage : Page
     {
         if (ViewModel is null) return;
         var packageName = ViewModel.PackageNameInput.Trim();
-        var serial = ViewModel.SelectedToolsDeviceSerial;
+        var serial = ViewModel.SelectedDeviceSerial;
         if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(serial))
         {
             await ViewModel.UninstallPackageByNameAsync();
@@ -356,7 +410,7 @@ public sealed partial class MainPage : Page
         {
             XamlRoot = XamlRoot,
             Title = "确认按包名卸载",
-            Content = $"将从设备 {serial} 卸载 {packageName}，并删除该应用的设备数据。",
+            Content = $"将从设备 {ViewModel.GetDeviceLabel(serial)} 卸载 {packageName}，并删除该应用的设备数据。",
             PrimaryButtonText = "卸载",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close
@@ -369,7 +423,28 @@ public sealed partial class MainPage : Page
 
     private async void RunShellCommand_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null) await ViewModel.RunDeviceShellCommandAsync();
+        if (ViewModel is null) return;
+        var serial = ViewModel.SelectedDeviceSerial;
+        var command = ViewModel.ShellCommand.Trim();
+        if (string.IsNullOrWhiteSpace(serial) || string.IsNullOrWhiteSpace(command))
+        {
+            await ViewModel.RunDeviceShellCommandAsync();
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "确认执行 ADB Shell",
+            Content = $"目标设备：{ViewModel.GetDeviceLabel(serial)}\n\n命令：{command}\n\n设备端 sh 将解释此命令，可能修改或删除设备数据。",
+            PrimaryButtonText = "执行",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await ViewModel.RunDeviceShellCommandAsync();
+        }
     }
 
     private void CancelShellCommand_Click(object sender, RoutedEventArgs e) =>
@@ -377,6 +452,15 @@ public sealed partial class MainPage : Page
 
     private void ClearShellOutput_Click(object sender, RoutedEventArgs e) =>
         ViewModel?.ClearShellOutput();
+
+    private void CopyStatus_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null || string.IsNullOrWhiteSpace(ViewModel.StatusText)) return;
+        var data = new DataPackage();
+        data.SetText(ViewModel.StatusText);
+        Clipboard.SetContent(data);
+        Clipboard.Flush();
+    }
 
     private async void SaveScreenshot_Click(object sender, RoutedEventArgs e)
     {
@@ -391,7 +475,7 @@ public sealed partial class MainPage : Page
         var file = await picker.PickSaveFileAsync();
         if (file is not null)
         {
-            await ViewModel.CaptureScreenshotAsync(ViewModel.SelectedToolsDeviceSerial, file.Path);
+            await ViewModel.CaptureScreenshotAsync(ViewModel.SelectedDeviceSerial, file.Path);
         }
     }
 
@@ -408,7 +492,7 @@ public sealed partial class MainPage : Page
         var file = await picker.PickSaveFileAsync();
         if (file is not null)
         {
-            await ViewModel.ExportLogcatAsync(ViewModel.SelectedToolsDeviceSerial, file.Path);
+            await ViewModel.ExportLogcatAsync(ViewModel.SelectedDeviceSerial, file.Path);
         }
     }
 
@@ -426,7 +510,7 @@ public sealed partial class MainPage : Page
     {
         if (ViewModel is not null)
         {
-            await ViewModel.PullRemoteFileAsync(ViewModel.SelectedToolsDeviceSerial);
+            await ViewModel.PullRemoteFileAsync(ViewModel.SelectedDeviceSerial);
         }
     }
 
