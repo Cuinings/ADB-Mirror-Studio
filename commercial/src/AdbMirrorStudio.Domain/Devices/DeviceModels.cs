@@ -35,7 +35,7 @@ public sealed record DeviceInfo(
         {
             var deviceName = Model == "—" ? "未知设备" : Model;
             return ConnectionKind == ConnectionKind.TcpIp
-                ? $"{deviceName}/{Serial}"
+                ? $"{deviceName} {Serial}"
                 : Model == "—" ? Serial : deviceName;
         }
     }

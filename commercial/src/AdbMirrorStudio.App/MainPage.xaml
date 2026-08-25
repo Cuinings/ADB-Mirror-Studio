@@ -621,7 +621,6 @@
                                             Style="{ThemeResource AccentButtonStyle}" />
                                     <Button Content="取消下载" Click="CancelUpdateDownload_Click"
                                             IsEnabled="{Binding IsUpdateDownloading}" />
-                                    <Button Content="打开发布页面" Click="OpenUpdate_Click" />
                                     <ProgressRing Width="22" Height="22" IsActive="{Binding IsBusy}" />
                                 </StackPanel>
                             </StackPanel>

@@ -39,7 +39,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _selectedMirrorProfileId = MirrorProfile.Balanced.Id;
     private string _recordingPath = string.Empty;
     private string _updateStatusText = "尚未检查更新";
-    private string? _updateDownloadUrl;
     private bool _updateAvailable;
     private bool _isUpdateDownloading;
     private double _updateDownloadProgress;
@@ -153,11 +152,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _updateStatusText;
         private set => SetField(ref _updateStatusText, value);
-    }
-    public string? UpdateDownloadUrl
-    {
-        get => _updateDownloadUrl;
-        private set => SetField(ref _updateDownloadUrl, value);
     }
     public bool UpdateAvailable
     {
@@ -818,20 +812,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var update = await _updates.CheckAsync();
             _availableUpdate = update;
             UpdateAvailable = update.IsUpdateAvailable;
-            UpdateDownloadUrl = update.ReleaseUrl;
             OnPropertyChanged(nameof(LatestUpdateVersion));
             OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
             UpdateStatusText = update.IsUpdateAvailable
                 ? update.Installer is not null
                     ? $"发现新版本 {update.LatestVersion}，可直接下载并安装"
-                    : $"发现新版本 {update.LatestVersion}，但没有可验证的安装包，请打开发布页面"
+                    : $"发现新版本 {update.LatestVersion}，但没有可验证的 Windows 安装包"
                 : $"当前已是最新版本 {update.CurrentVersion}";
         }
         catch (Exception exception)
         {
             _availableUpdate = null;
             UpdateAvailable = false;
-            UpdateDownloadUrl = "https://github.com/Cuinings/ADB-Mirror-Studio/releases";
             OnPropertyChanged(nameof(LatestUpdateVersion));
             OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
             UpdateStatusText = $"检查更新失败：{exception.Message}";

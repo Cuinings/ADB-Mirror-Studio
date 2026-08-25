@@ -581,13 +581,6 @@ public sealed partial class MainPage : Page
     private void CancelUpdateDownload_Click(object sender, RoutedEventArgs e) =>
         ViewModel?.CancelUpdateDownload();
 
-    private void OpenUpdate_Click(object sender, RoutedEventArgs e)
-    {
-        var url = ViewModel?.UpdateDownloadUrl
-            ?? "https://github.com/Cuinings/ADB-Mirror-Studio/releases";
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-    }
-
     private async void ThemeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_initializingSettings || ViewModel is null) return;
