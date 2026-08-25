@@ -1,4 +1,4 @@
-# ADB Mirror Studio V1.1.0（开发中）
+# ADB Mirror Studio V1.1.0
 
 `V1.1.0` 是保持现有安装、设置和操作方式兼容的免费功能版本。
 
