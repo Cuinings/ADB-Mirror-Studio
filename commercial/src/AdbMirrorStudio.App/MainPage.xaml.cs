@@ -328,6 +328,43 @@ public sealed partial class MainPage : Page
         await ViewModel.RunAppActionAsync(action);
     }
 
+    private async void UninstallPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null) return;
+        var packageName = ViewModel.PackageNameInput.Trim();
+        var serial = ViewModel.SelectedToolsDeviceSerial;
+        if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(serial))
+        {
+            await ViewModel.UninstallPackageByNameAsync();
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "确认按包名卸载",
+            Content = $"将从设备 {serial} 卸载 {packageName}，并删除该应用的设备数据。",
+            PrimaryButtonText = "卸载",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await ViewModel.UninstallPackageByNameAsync();
+        }
+    }
+
+    private async void RunShellCommand_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null) await ViewModel.RunDeviceShellCommandAsync();
+    }
+
+    private void CancelShellCommand_Click(object sender, RoutedEventArgs e) =>
+        ViewModel?.CancelDeviceShellCommand();
+
+    private void ClearShellOutput_Click(object sender, RoutedEventArgs e) =>
+        ViewModel?.ClearShellOutput();
+
     private async void SaveScreenshot_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is null || Microsoft.UI.Xaml.Application.Current is not App { MainWindow: not null } app) return;

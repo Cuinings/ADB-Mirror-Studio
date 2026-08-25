@@ -193,6 +193,36 @@ public sealed class AdbServiceTransferTests : IDisposable
         await service.UninstallAppAsync("device", "com.example.app");
         Assert.Equal(["-s", "device", "uninstall", "com.example.app"], runner.LastRequest!.Arguments);
         await Assert.ThrowsAsync<ArgumentException>(() => service.LaunchAppAsync("device", "bad;package"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UninstallAppAsync("device", ".bad.package"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UninstallAppAsync("device", "bad..package"));
+    }
+
+    [Fact]
+    public async Task RunShellCommandAsync_TargetsSelectedDeviceWithoutStartingWindowsShell()
+    {
+        var runner = new CapturingRunner("Pixel 9\n");
+        var adbPath = CreateFile("adb.exe");
+        var service = new AdbService(runner, adbPath);
+
+        var output = await service.RunShellCommandAsync("device-2", "getprop ro.product.model");
+
+        Assert.Equal("Pixel 9", output);
+        Assert.Equal(adbPath, runner.LastRequest!.FileName);
+        Assert.Equal(["-s", "device-2", "shell", "sh", "-c", "getprop ro.product.model"], runner.LastRequest.Arguments);
+        Assert.True(runner.LastRequest.SensitiveArguments);
+        Assert.DoesNotContain("cmd.exe", runner.LastRequest.FileName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("getprop\nreboot")]
+    public async Task RunShellCommandAsync_RejectsEmptyOrMultilineCommands(string command)
+    {
+        var runner = new CapturingRunner(string.Empty);
+        var service = new AdbService(runner, CreateFile("adb.exe"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.RunShellCommandAsync("device", command));
+        Assert.Empty(runner.Requests);
     }
 
     private string CreateFile(string name)

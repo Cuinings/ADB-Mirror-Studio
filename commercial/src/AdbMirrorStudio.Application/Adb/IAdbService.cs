@@ -23,6 +23,7 @@ public interface IAdbService
     Task LaunchAppAsync(string serial, string packageName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     Task ForceStopAppAsync(string serial, string packageName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     Task UninstallAppAsync(string serial, string packageName, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<string> RunShellCommandAsync(string serial, string command, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }
 
 public sealed class AdbCommandException(string message, int? exitCode = null) : Exception(message)

@@ -485,8 +485,46 @@
                                     <AppBarButton Label="强制停止" Tag="stop" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
                                     <AppBarButton Label="卸载" Tag="uninstall" Click="AppAction_Click" IsEnabled="{Binding IsIdle}" />
                                 </CommandBar>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Header="按包名卸载" Text="{Binding PackageNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             PlaceholderText="例如 com.example.app" />
+                                    <Button Grid.Column="1" Content="卸载指定包名" Click="UninstallPackage_Click"
+                                            IsEnabled="{Binding IsIdle}" VerticalAlignment="Bottom" />
+                                </Grid>
                                 <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="卸载提示"
-                                         Message="卸载会删除该应用及其本机数据，执行前会再次确认。" />
+                                         Message="可以从列表选择或直接输入包名。卸载会删除该应用及其设备数据，执行前会再次确认。" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="18" CornerRadius="14"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="ADB Shell（高级）" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="命令只发送到上方选中的 Android 设备，不调用 Windows cmd.exe，也不会保存命令历史。"
+                                               TextWrapping="Wrap" Opacity="0.62" />
+                                </StackPanel>
+                                <TextBox Header="设备命令" Text="{Binding ShellCommand, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="例如 getprop ro.product.model" />
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Button Content="在选中设备执行" Click="RunShellCommand_Click"
+                                            IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}" />
+                                    <Button Content="取消" Click="CancelShellCommand_Click"
+                                            IsEnabled="{Binding IsShellCommandRunning}" />
+                                    <Button Content="清除输出" Click="ClearShellOutput_Click" />
+                                </StackPanel>
+                                <TextBox Text="{Binding ShellOutput}" IsReadOnly="True" AcceptsReturn="True"
+                                         FontFamily="Consolas" MinHeight="160" MaxHeight="300"
+                                         TextWrapping="NoWrap"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                <InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Title="高级操作"
+                                         Message="命令由设备端 sh 解释，可能修改或删除设备数据。请确认目标设备和命令内容后再执行。" />
                             </StackPanel>
                         </Border>
 

@@ -254,6 +254,30 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
         _ = await ExecuteAsync(["-s", serial.Trim(), "uninstall", packageName.Trim()], TimeSpan.FromMinutes(2), cancellationToken);
     }
 
+    public async Task<string> RunShellCommandAsync(
+        string serial,
+        string command,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSerial(serial);
+        ValidateShellCommand(command);
+        if (!File.Exists(adbPath)) throw new FileNotFoundException("未找到 adb.exe。", adbPath);
+        var result = await commandRunner.RunAsync(
+            new CommandRequest(
+                adbPath,
+                ["-s", serial.Trim(), "shell", "sh", "-c", command.Trim()],
+                Path.GetDirectoryName(adbPath),
+                Timeout: TimeSpan.FromMinutes(1),
+                SensitiveArguments: true),
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccess(result);
+
+        var output = result.StandardOutput.TrimEnd();
+        var error = result.StandardError.TrimEnd();
+        if (string.IsNullOrWhiteSpace(output)) return string.IsNullOrWhiteSpace(error) ? "（命令没有输出）" : error;
+        return string.IsNullOrWhiteSpace(error) ? output : $"{output}{Environment.NewLine}[stderr]{Environment.NewLine}{error}";
+    }
+
     private async Task<CommandResult> ExecuteAsync(
         IReadOnlyList<string> arguments,
         TimeSpan timeout,
@@ -287,10 +311,31 @@ public sealed class AdbService(ICommandRunner commandRunner, string adbPath) : I
 
     private static void ValidatePackageName(string packageName)
     {
-        if (string.IsNullOrWhiteSpace(packageName)
-            || packageName.Any(character => !(char.IsLetterOrDigit(character) || character is '.' or '_')))
+        var normalized = packageName?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized)
+            || normalized.Length > 255
+            || normalized.StartsWith('.')
+            || normalized.EndsWith('.')
+            || normalized.Contains("..", StringComparison.Ordinal)
+            || normalized.Any(character => !(char.IsLetterOrDigit(character) || character is '.' or '_')))
         {
             throw new ArgumentException("应用包名格式无效。", nameof(packageName));
+        }
+    }
+
+    private static void ValidateShellCommand(string command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            throw new ArgumentException("设备命令不能为空。", nameof(command));
+        }
+        if (command.Length > 4096)
+        {
+            throw new ArgumentException("设备命令不能超过 4096 个字符。", nameof(command));
+        }
+        if (command.Any(character => char.IsControl(character) && character != '\t'))
+        {
+            throw new ArgumentException("设备命令不能包含换行或其他控制字符。", nameof(command));
         }
     }
 

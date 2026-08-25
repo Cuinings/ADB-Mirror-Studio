@@ -26,6 +26,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private CancellationTokenSource? _refreshCancellation;
     private CancellationTokenSource? _transferCancellation;
     private CancellationTokenSource? _updateDownloadCancellation;
+    private CancellationTokenSource? _shellCommandCancellation;
     private int _busyCount;
     private int _transferRunning;
     private bool _disposed;
@@ -48,6 +49,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string? _selectedTransferDeviceSerial;
     private string? _selectedToolsDeviceSerial;
     private string? _selectedAppPackage;
+    private string _packageNameInput = string.Empty;
+    private string _shellCommand = string.Empty;
+    private string _shellOutput = "尚未执行设备命令。";
+    private bool _isShellCommandRunning;
     private AppSettings _settings = AppSettings.Default;
 
     public MainViewModel(AppServices services)
@@ -208,6 +213,26 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _selectedAppPackage;
         set => SetField(ref _selectedAppPackage, value);
+    }
+    public string PackageNameInput
+    {
+        get => _packageNameInput;
+        set => SetField(ref _packageNameInput, value);
+    }
+    public string ShellCommand
+    {
+        get => _shellCommand;
+        set => SetField(ref _shellCommand, value);
+    }
+    public string ShellOutput
+    {
+        get => _shellOutput;
+        private set => SetField(ref _shellOutput, value);
+    }
+    public bool IsShellCommandRunning
+    {
+        get => _isShellCommandRunning;
+        private set => SetField(ref _isShellCommandRunning, value);
     }
 
     public async Task InitializeAsync()
@@ -976,8 +1001,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 case "uninstall": await _adb.UninstallAppAsync(SelectedToolsDeviceSerial, SelectedAppPackage); break;
                 default: throw new ArgumentOutOfRangeException(nameof(action));
             }
-            StatusText = $"应用操作已完成：{SelectedAppPackage}";
             if (action == "uninstall") await RefreshInstalledAppsAsync(includeSystemApps: false);
+            StatusText = $"应用操作已完成：{SelectedAppPackage}";
         }
         catch (Exception exception)
         {
@@ -988,6 +1013,93 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             ExitBusy();
         }
     }
+
+    public async Task UninstallPackageByNameAsync()
+    {
+        var serial = SelectedToolsDeviceSerial;
+        var packageName = PackageNameInput.Trim();
+        if (string.IsNullOrWhiteSpace(serial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(packageName))
+        {
+            StatusText = "请输入需要卸载的应用包名";
+            return;
+        }
+
+        EnterBusy();
+        try
+        {
+            await _adb.UninstallAppAsync(serial, packageName);
+            PackageNameInput = string.Empty;
+            await RefreshInstalledAppsAsync(includeSystemApps: false);
+            StatusText = $"已从 {serial} 卸载 {packageName}";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"按包名卸载失败：{exception.Message}";
+        }
+        finally
+        {
+            ExitBusy();
+        }
+    }
+
+    public async Task RunDeviceShellCommandAsync()
+    {
+        var serial = SelectedToolsDeviceSerial;
+        var command = ShellCommand.Trim();
+        if (string.IsNullOrWhiteSpace(serial))
+        {
+            StatusText = "请选择一台目标设备";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            StatusText = "请输入需要在设备上执行的命令";
+            return;
+        }
+        if (_shellCommandCancellation is not null || IsBusy) return;
+
+        var cancellation = new CancellationTokenSource();
+        _shellCommandCancellation = cancellation;
+        IsShellCommandRunning = true;
+        EnterBusy();
+        StatusText = $"正在 {serial} 上执行 ADB Shell 命令…";
+        ShellOutput = $"$ {command}{Environment.NewLine}正在执行…";
+        try
+        {
+            var output = await _adb.RunShellCommandAsync(serial, command, cancellation.Token);
+            ShellOutput = $"$ {command}{Environment.NewLine}{output}";
+            StatusText = $"{serial} 的设备命令执行完成";
+        }
+        catch (OperationCanceledException)
+        {
+            ShellOutput = $"$ {command}{Environment.NewLine}（命令已取消）";
+            StatusText = "设备命令已取消";
+        }
+        catch (Exception exception)
+        {
+            ShellOutput = $"$ {command}{Environment.NewLine}[错误] {exception.Message}";
+            StatusText = $"设备命令失败：{exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(_shellCommandCancellation, cancellation))
+            {
+                _shellCommandCancellation = null;
+            }
+            cancellation.Dispose();
+            IsShellCommandRunning = false;
+            ExitBusy();
+        }
+    }
+
+    public void CancelDeviceShellCommand() => _shellCommandCancellation?.Cancel();
+
+    public void ClearShellOutput() => ShellOutput = "尚未执行设备命令。";
 
     public async Task ArrangeMirrorWindowsAsync(MirrorWindowLayout layout)
     {
@@ -1091,6 +1203,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         refreshCancellation?.Dispose();
         _transferCancellation?.Cancel();
         _updateDownloadCancellation?.Cancel();
+        _shellCommandCancellation?.Cancel();
     }
 
     private void OnSessionChanged(object? sender, MirrorSession session)

@@ -10,6 +10,8 @@
 
 当前版本：`V1.0.0`
 
+开发版本：`V1.1.0`（新增按包名卸载和指定设备 ADB Shell，尚未发布）
+
 - [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.0.0)
 - [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.0.0/ADB-Mirror-Studio-Setup-V1.0.0-win-x64.exe)
 - [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.0.0/AdbMirrorStudio-V1.0.0-win-x64.zip)
@@ -36,6 +38,8 @@ SHA256：
 - 设备详情、电池、存储、截图和 Logcat 导出
 - 返回、主页、最近任务、电源和音量快捷控制
 - 用户应用读取、启动、强制停止和确认卸载
+- 无需读取应用列表，直接按 Android 包名确认卸载
+- 指定目标设备的内置 ADB Shell 控制台，不调用 Windows cmd.exe
 - ADB、scrcpy、mDNS 与 PATH 冲突诊断
 - WinUI 3、Desktop Acrylic、浅色/深色主题和高 DPI 自适应
 - 检测 GitHub 新版本，在校验文件名、大小和 SHA256 后下载并启动安装程序
@@ -150,6 +154,7 @@ SHA256：
 
 - [完整使用、开发和发布手册](commercial/README.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
+- [V1.1.0 开发说明](commercial/RELEASE-NOTES-V1.1.0.md)
 - [版本管理规则](commercial/VERSIONING.md)
 - [隐私说明](commercial/PRIVACY.md)
 - [免费使用许可](commercial/FREE-USE-LICENSE.md)
