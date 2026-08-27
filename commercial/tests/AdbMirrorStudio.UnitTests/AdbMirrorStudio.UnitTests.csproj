@@ -30,5 +30,11 @@
     <None Include="..\..\src\AdbMirrorStudio.App\MainPage.xaml.cs"
           Link="Fixtures\MainPage.xaml.cs"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\AdbMirrorStudio.App\App.xaml.cs"
+          Link="Fixtures\App.xaml.cs"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\AdbMirrorStudio.App\ViewModels\MainViewModel.cs"
+          Link="Fixtures\MainViewModel.cs"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -8,22 +8,23 @@
 
 ## 下载
 
-当前版本：`V1.3.0`
+当前版本：`V1.3.1`
 
-- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.3.0)
-- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.3.0/ADB-Mirror-Studio-Setup-V1.3.0-win-x64.exe)
-- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.3.0/AdbMirrorStudio-V1.3.0-win-x64.zip)
+- [GitHub Release](https://github.com/Cuinings/ADB-Mirror-Studio/releases/tag/V1.3.1)
+- [下载安装版（推荐）](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.3.1/ADB-Mirror-Studio-Setup-V1.3.1-win-x64.exe)
+- [下载便携版](https://github.com/Cuinings/ADB-Mirror-Studio/releases/download/V1.3.1/AdbMirrorStudio-V1.3.1-win-x64.zip)
 
 SHA256：
 
 ```text
-安装版  D4DAA01DD04AF43759E0EE40BED63F69758EDD471FCEB450AF3E98E7CC4F1C2B
-便携版  EFC56E75A1E480CD4592E5846862B707BEE45FCA01DDD6BE13E36355B40F65F8
+安装版  B799992B36891C87BC49F900C082CDB51F185590A24AF6C17DED87E62E1F4B28
+便携版  2009F2AC3213DA164AAAB4AC81A7FFDE9A33708D2B4872382BDF99BF7EF27DE7
 ```
 
 ## 主要功能
 
 - USB、IPv4、IPv6 和主机名 ADB 连接
+- 单实例运行；重复启动会唤醒已有窗口
 - Android 11+ mDNS 发现与六位配对码无线配对
 - 记忆最近 10 个成功连接的无线地址，仅供手动选择，绝不自动重连
 - 流畅、均衡、高清、演示四档 scrcpy 镜像预设
@@ -56,7 +57,7 @@ SHA256：
 
 ### 安装版
 
-1. 下载 `ADB-Mirror-Studio-Setup-V1.3.0-win-x64.exe`。
+1. 下载 `ADB-Mirror-Studio-Setup-V1.3.1-win-x64.exe`。
 2. 核对上方 SHA256 后运行安装程序。
 3. 从开始菜单打开 ADB Mirror Studio。
 
@@ -64,7 +65,7 @@ SHA256：
 
 ### 便携版
 
-1. 下载 `AdbMirrorStudio-V1.3.0-win-x64.zip`。
+1. 下载 `AdbMirrorStudio-V1.3.1-win-x64.zip`。
 2. 完整解压 ZIP，不要直接在压缩包中运行。
 3. 双击 `AdbMirrorStudio.App.exe`。
 
@@ -154,6 +155,7 @@ SHA256：
 - [完整使用、开发和发布手册](commercial/README.md)
 - [V1.0.0 发行说明](commercial/RELEASE-NOTES-V1.0.0.md)
 - [V1.1.0 发行说明](commercial/RELEASE-NOTES-V1.1.0.md)
+- [V1.3.1 发行说明](commercial/RELEASE-NOTES-V1.3.1.md)
 - [V1.3.0 发行说明](commercial/RELEASE-NOTES-V1.3.0.md)
 - [V1.2.0 发行说明](commercial/RELEASE-NOTES-V1.2.0.md)
 - [版本管理规则](commercial/VERSIONING.md)

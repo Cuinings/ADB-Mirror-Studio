@@ -2,7 +2,7 @@
 
 ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、录屏、文件传输和环境诊断工作台。界面采用 WinUI 3 与 Desktop Acrylic，ADB、scrcpy 和应用运行时均可随便携包分发。所有功能永久免费，无账户、无试用、无订阅、无激活和功能分级。
 
-> 当前公开版本：`V1.3.0`。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
+> 当前软件版本：`V1.3.1`。个人、组织和企业均可在合法授权的设备上免费使用全部功能。
 
 ## 系统要求
 
@@ -21,12 +21,14 @@ ADB Mirror Studio 是面向 Windows 的 Android 设备连接、屏幕镜像、�
 ### 设备连接
 
 - 异步刷新 USB 与无线 ADB 设备
+- 单实例运行；重复启动会唤醒已有窗口，不会打开第二个客户端
 - 支持 IPv4、IPv6 和主机名连接
 - 支持 Android 11+ mDNS 发现和六位配对码安全无线配对
 - USB 设备切换至指定 ADB TCP/IP 端口
 - 记忆最近 10 个通过应用成功连接的无线地址，可手动选择和清除；启动时不会自动重连
 - 无线设备统一显示为“设备名称 IP:端口”，便于在多设备环境中确认目标
-- 设备状态、连接类型、型号和授权状态显示
+- 连接类型和在线、离线、未授权状态紧跟设备名称显示
+- TCP/IP、重启和断开操作直接显示在设备列表中
 - 设备重启与无线连接断开
 
 ### 镜像与录屏
@@ -318,7 +320,7 @@ commercial/
 
 ```text
 commercial\artifacts\release\
-  AdbMirrorStudio-V1.3.0-win-x64.zip
+  AdbMirrorStudio-V1.3.1-win-x64.zip
 ```
 
 生成安装版：
@@ -333,7 +335,7 @@ commercial\artifacts\release\
 
 ```text
 commercial\artifacts\installer\
-  ADB-Mirror-Studio-Setup-V1.3.0-win-x64.exe
+  ADB-Mirror-Studio-Setup-V1.3.1-win-x64.exe
 ```
 
 ## 第三方组件

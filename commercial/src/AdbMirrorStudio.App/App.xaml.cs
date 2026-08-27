@@ -9,19 +9,26 @@ using AdbMirrorStudio.Infrastructure.Processes;
 using AdbMirrorStudio.Infrastructure.Persistence;
 using AdbMirrorStudio.Infrastructure.Scrcpy;
 using AdbMirrorStudio.Infrastructure.Updates;
+using Microsoft.Windows.AppLifecycle;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using WinRT.Interop;
 
 namespace AdbMirrorStudio.App;
 
 public partial class App : Microsoft.UI.Xaml.Application
 {
+    private const string MainInstanceKey = "ADB-Mirror-Studio.Main";
+    private const int RestoreWindowCommand = 9;
     private MainWindow? _window;
+    private AppInstance? _mainAppInstance;
     private IMirrorSessionManager? _mirrorSessions;
     private HttpClient? _httpClient;
     private string? _toolsDirectory;
     private bool _shuttingDown;
+    private int _activationRequested;
     internal MainWindow? MainWindow => _window;
 
     public App()
@@ -30,10 +37,20 @@ public partial class App : Microsoft.UI.Xaml.Application
         InitializeComponent();
     }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         try
         {
+            var currentInstance = AppInstance.GetCurrent();
+            _mainAppInstance = AppInstance.FindOrRegisterForKey(MainInstanceKey);
+            if (!_mainAppInstance.IsCurrent)
+            {
+                await _mainAppInstance.RedirectActivationToAsync(currentInstance.GetActivatedEventArgs());
+                Environment.Exit(0);
+                return;
+            }
+            _mainAppInstance.Activated += OnAppInstanceActivated;
+
             var toolsDirectory = Path.Combine(AppContext.BaseDirectory, "Tools");
             _toolsDirectory = toolsDirectory;
             var runner = new ProcessCommandRunner();
@@ -56,12 +73,38 @@ public partial class App : Microsoft.UI.Xaml.Application
             _window = new MainWindow(new AppServices(adb, _mirrorSessions, settings, diagnostics, updates));
             _window.AppWindow.Closing += OnAppWindowClosing;
             _window.Activate();
+            if (Interlocked.Exchange(ref _activationRequested, 0) != 0) ActivateExistingWindow();
         }
         catch (Exception exception)
         {
             CrashLog.Write(exception);
             throw;
         }
+    }
+
+    private void OnAppInstanceActivated(object? sender, AppActivationArguments args)
+    {
+        Interlocked.Exchange(ref _activationRequested, 1);
+        var window = _window;
+        if (window is null) return;
+        window.DispatcherQueue.TryEnqueue(() =>
+        {
+            Interlocked.Exchange(ref _activationRequested, 0);
+            ActivateExistingWindow();
+        });
+    }
+
+    private void ActivateExistingWindow()
+    {
+        var window = _window;
+        if (window is null) return;
+        var handle = WindowNative.GetWindowHandle(window);
+        if (handle != IntPtr.Zero)
+        {
+            _ = ShowWindow(handle, RestoreWindowCommand);
+            _ = SetForegroundWindow(handle);
+        }
+        window.Activate();
     }
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
@@ -81,9 +124,18 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
         finally
         {
+            if (_mainAppInstance is not null) _mainAppInstance.Activated -= OnAppInstanceActivated;
             _httpClient?.Dispose();
         }
     }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr windowHandle, int command);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr windowHandle);
 
     private static void StopBundledToolProcesses(string toolsDirectory)
     {

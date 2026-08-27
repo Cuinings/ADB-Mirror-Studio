@@ -11,7 +11,9 @@ using AdbMirrorStudio.Domain.Devices;
 using AdbMirrorStudio.Domain.Mirroring;
 using AdbMirrorStudio.Domain.Settings;
 using AdbMirrorStudio.Infrastructure.Adb;
+using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace AdbMirrorStudio.App.ViewModels;
 
@@ -295,7 +297,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         };
         var loadedHistory = loadedSettings.RememberedEndpoints ?? [];
         ReplaceRememberedEndpoints(_settings.RememberedEndpoints);
-        Endpoint = RememberedEndpoints.FirstOrDefault() ?? string.Empty;
+        Endpoint = string.Empty;
         SelectedMirrorProfileId = MirrorProfile.Presets.Any(profile => profile.Id == _settings.MirrorProfileId)
             ? _settings.MirrorProfileId
             : MirrorProfile.Balanced.Id;
@@ -675,10 +677,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task ConnectAsync()
     {
+        var endpoint = Endpoint.Trim();
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            StatusText = "请输入设备 IP 地址和端口";
+            return;
+        }
+
         EnterBusy();
         try
         {
-            var normalizedEndpoint = AdbEndpoint.Normalize(Endpoint);
+            var normalizedEndpoint = AdbEndpoint.Normalize(endpoint);
             Endpoint = normalizedEndpoint;
             StatusText = $"正在连接 {normalizedEndpoint}…";
             var result = await _adb.ConnectAsync(normalizedEndpoint);
@@ -1372,7 +1381,15 @@ public sealed class DeviceCardViewModel(DeviceInfo device, bool isMirroring) : I
         _ => device.State.ToString()
     };
     public string ConnectionLabel => device.ConnectionKind == ConnectionKind.TcpIp ? "Wi-Fi" : "USB";
+    public Brush StateIndicatorBrush => new SolidColorBrush(device.State switch
+    {
+        DeviceState.Online => ColorHelper.FromArgb(255, 48, 200, 117),
+        DeviceState.Unauthorized => ColorHelper.FromArgb(255, 234, 163, 0),
+        DeviceState.Error => ColorHelper.FromArgb(255, 232, 93, 93),
+        _ => ColorHelper.FromArgb(255, 138, 138, 138)
+    });
     public bool IsOnline => device.State == DeviceState.Online;
+    public bool CanDisconnect => device.ConnectionKind == ConnectionKind.TcpIp;
     public string MirrorButtonText => IsMirroring ? "运行中" : "打开镜像";
 
     public bool IsMirroring

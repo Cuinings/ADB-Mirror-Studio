@@ -75,7 +75,9 @@ public sealed partial class MainPage : Page
 
     private async void Connect_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null) await ViewModel.ConnectAsync();
+        if (ViewModel is null) return;
+        ViewModel.Endpoint = EndpointBox.Text?.Trim() ?? string.Empty;
+        await ViewModel.ConnectAsync();
     }
 
     private async void ClearHistory_Click(object sender, RoutedEventArgs e)
@@ -108,25 +110,6 @@ public sealed partial class MainPage : Page
     {
         if (ViewModel is null || ViewModel.IsBusy || GetCommandSerial(sender) is not { } serial) return;
         await ViewModel.DisconnectAsync(serial);
-    }
-
-    private void DeviceMore_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button || GetCommandSerial(button) is not { } serial) return;
-
-        var enableTcpIp = new MenuFlyoutItem { Text = "启用 TCP/IP", Tag = serial };
-        enableTcpIp.Click += EnableTcpIp_Click;
-        var reboot = new MenuFlyoutItem { Text = "重启设备", Tag = serial };
-        reboot.Click += Reboot_Click;
-        var disconnect = new MenuFlyoutItem { Text = "断开连接", Tag = serial };
-        disconnect.Click += Disconnect_Click;
-
-        var menu = new MenuFlyout();
-        menu.Items.Add(enableTcpIp);
-        menu.Items.Add(reboot);
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(disconnect);
-        menu.ShowAt(button);
     }
 
     private async void Reboot_Click(object sender, RoutedEventArgs e)
