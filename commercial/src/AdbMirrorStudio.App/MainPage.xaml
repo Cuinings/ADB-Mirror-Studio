@@ -55,38 +55,92 @@
                     </Grid>
 
                     <Expander Grid.Row="1" Margin="0,20,0,16" Header="添加或连接设备" IsExpanded="False">
-                        <StackPanel Padding="0,12,0,2" Spacing="12">
-                            <Border Padding="16" CornerRadius="12"
+                        <Grid x:Name="ConnectionMethodsGrid" Padding="0,12,0,2" ColumnSpacing="12" RowSpacing="12">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup>
+                                    <VisualState x:Name="HorizontalConnectionMethods">
+                                        <VisualState.StateTriggers>
+                                            <AdaptiveTrigger MinWindowWidth="480" />
+                                        </VisualState.StateTriggers>
+                                    </VisualState>
+                                    <VisualState x:Name="StackedConnectionMethods">
+                                        <VisualState.StateTriggers>
+                                            <AdaptiveTrigger MinWindowWidth="0" />
+                                        </VisualState.StateTriggers>
+                                        <VisualState.Setters>
+                                            <Setter Target="PairingCard.(Grid.Row)" Value="1" />
+                                            <Setter Target="PairingCard.(Grid.Column)" Value="0" />
+                                            <Setter Target="ConnectionColumn1.Width" Value="0" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="ConnectionColumn0" Width="*" />
+                                <ColumnDefinition x:Name="ConnectionColumn1" Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Border x:Name="AddressConnectionCard" Padding="16" CornerRadius="12"
                                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                <StackPanel Spacing="10">
+                                <Grid RowSpacing="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <StackPanel Spacing="3">
                                         <TextBlock Text="地址连接" FontSize="17" FontWeight="SemiBold" />
-                                        <TextBlock Text="输入无线地址或选择本机记忆的历史记录；启动时不会自动重连" Opacity="0.62" TextWrapping="Wrap" />
+                                        <TextBlock Text="输入地址或选择历史记录；启动时不会自动重连"
+                                                   Opacity="0.62" TextWrapping="Wrap" />
                                     </StackPanel>
-                                    <ComboBox x:Name="EndpointBox" Header="无线地址" ItemsSource="{Binding RememberedEndpoints}"
+                                    <ComboBox x:Name="EndpointBox" Grid.Row="1" Header="无线地址"
+                                              ItemsSource="{Binding RememberedEndpoints}"
                                               Text="{Binding Endpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              IsEditable="True" PlaceholderText="IP:端口、IPv6 地址或主机名" />
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                              IsEditable="True" PlaceholderText="IP:端口、IPv6 地址或主机名"
+                                              HorizontalAlignment="Stretch" />
+                                    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10">
                                         <Button Content="连接设备" Click="Connect_Click" IsEnabled="{Binding IsIdle}"
                                                 Style="{ThemeResource AccentButtonStyle}" />
                                         <Button Content="清除记录" Click="ClearHistory_Click"
                                                 IsEnabled="{Binding HasRememberedEndpoints}" />
                                     </StackPanel>
-                                </StackPanel>
+                                </Grid>
                             </Border>
-                            <Expander Header="Android 11+ 安全无线配对" IsExpanded="False">
-                                <StackPanel Padding="0,12,0,2" Spacing="10">
-                                    <ComboBox ItemsSource="{Binding DiscoveredPairingEndpoints}"
-                                              Text="{Binding PairEndpoint, Mode=TwoWay}" IsEditable="True"
-                                              Header="配对地址" PlaceholderText="IP:配对端口" />
-                                    <PasswordBox x:Name="PairingCodeBox" Header="六位配对码"
-                                                 PasswordChanged="PairingCodeBox_PasswordChanged" />
-                                    <Button Content="配对" Click="Pair_Click" IsEnabled="{Binding IsIdle}"
-                                            Style="{ThemeResource AccentButtonStyle}" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Expander>
-                        </StackPanel>
+                            <Border x:Name="PairingCard" Grid.Column="1" Padding="16" CornerRadius="12"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <Grid RowSpacing="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Android 11+ 无线配对" FontSize="17" FontWeight="SemiBold" />
+                                        <TextBlock Text="输入手机无线调试页面显示的配对地址和六位配对码"
+                                                   Opacity="0.62" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Spacing="10">
+                                        <ComboBox ItemsSource="{Binding DiscoveredPairingEndpoints}"
+                                                  Text="{Binding PairEndpoint, Mode=TwoWay}" IsEditable="True"
+                                                  Header="配对地址" PlaceholderText="IP:配对端口"
+                                                  HorizontalAlignment="Stretch" />
+                                        <PasswordBox x:Name="PairingCodeBox" Header="六位配对码"
+                                                     PasswordChanged="PairingCodeBox_PasswordChanged"
+                                                     HorizontalAlignment="Stretch" />
+                                    </StackPanel>
+                                    <Button Grid.Row="3" Content="配对设备" Click="Pair_Click"
+                                            IsEnabled="{Binding IsIdle}" Style="{ThemeResource AccentButtonStyle}"
+                                            HorizontalAlignment="Left" />
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Expander>
 
                     <Grid Grid.Row="2" Margin="0,4,0,10">

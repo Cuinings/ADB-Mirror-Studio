@@ -165,6 +165,25 @@ public sealed class MainPageMarkupTests
     }
 
     [Fact]
+    public void ConnectionMethodsAreSideBySideWithoutNestedPairingExpander()
+    {
+        var methods = ElementNamed("ConnectionMethodsGrid");
+        var pairingCard = ElementNamed("PairingCard");
+        var adaptiveWidths = methods.Descendants(Ui + "AdaptiveTrigger")
+            .Select(trigger => (string?)trigger.Attribute("MinWindowWidth"))
+            .ToArray();
+
+        Assert.Equal("1", (string?)pairingCard.Attribute("Grid.Column"));
+        Assert.Empty(methods.Descendants(Ui + "Expander"));
+        Assert.Contains("480", adaptiveWidths);
+        Assert.Contains("0", adaptiveWidths);
+        Assert.Contains(
+            methods.Descendants(Ui + "Button"),
+            button => (string?)button.Attribute("Content") == "配对设备"
+                      && (string?)button.Attribute("Click") == "Pair_Click");
+    }
+
+    [Fact]
     public void AppRegistersAndRedirectsToSingleMainInstance()
     {
         var code = File.ReadAllText(FixturePath("App.xaml.cs"));
